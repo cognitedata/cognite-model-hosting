@@ -9,10 +9,11 @@ black = "==18.9b0"
 isort = "*"
 pytest = "*"
 pytest-cov = "*"
+aioresponses = "*"
 
 [packages]
-requests = "*"
 pandas = "*"
+aiohttp = "*"
 
 [requires]
 python_version = "3.7"
