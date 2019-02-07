@@ -10,13 +10,12 @@ from cognite_data_fetcher._client.utils import choose_num_of_retries, format_par
 
 DEFAULT_BASE_URL = "https://api.cognitedata.com"
 DEFAULT_NUM_OF_RETRIES = 3
-DEFAULT_HEADERS = {"content-type": "application/json", "accept": "application/json"}
 
 HTTP_STATUS_CODES_TO_RETRY = [429, 500, 502, 503]
 HTTP_METHODS_TO_RETRY = ["GET", "DELETE"]
 
 timeout = aiohttp.ClientTimeout(total=60)
-client_session = aiohttp.ClientSession(timeout=timeout, headers=DEFAULT_HEADERS)
+client_session = aiohttp.ClientSession(timeout=timeout)
 
 
 class DataFetcherHttpError(Exception):
@@ -46,6 +45,8 @@ def _status_is_valid(status_code: int):
 def _raise_HTTP_error(code, x_request_id, response_body):
     extra = {}
     try:
+        if isinstance(response_body, str):
+            response_body = json.loads(response_body)
         error = response_body["error"]
         msg = error["message"]
         extra = error.get("extra")
@@ -68,16 +69,6 @@ class ApiClient:
 
         self._api_key = api_key or environment_api_key
         self._base_url = base_url or environment_base_url or DEFAULT_BASE_URL
-<<<<<<< Updated upstream
-        if num_of_retries is not None:
-            self._num_of_retries = num_of_retries
-        elif environment_num_of_retries is not None:
-            self._num_of_retries = int(environment_num_of_retries)
-        else:
-            self._num_of_retries = DEFAULT_NUM_OF_RETRIES
-        self._headers = {"api-key": self._api_key}
-        self._project = self._get_project(self._api_key)
-=======
         self._num_of_retries = choose_num_of_retries(num_of_retries, environment_num_of_retries, DEFAULT_NUM_OF_RETRIES)
         self._headers = {
             "api-key": self._api_key,
@@ -86,7 +77,6 @@ class ApiClient:
             "User-agent": "cognite-data-fetcher/{}".format(cognite_data_fetcher.__version__),
         }
         self._project = project or environment_project or self._get_project(self._api_key)
->>>>>>> Stashed changes
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)
         self._base_url_v0_6 = self._base_url + "/api/0.6/projects/{}".format(self._project)
 
@@ -95,18 +85,24 @@ class ApiClient:
             "GET", url, params=format_params(params or {}), api_version=api_version
         )
 
-    async def post(self, url: str, body: Dict[str, Any], api_version: Union[str, None] = "0.5"):
-        return await self._do_request_with_retry("POST", url, json=body, api_version=api_version)
+    async def post(
+        self, url: str, body: Dict[str, Any], headers: Dict[str, str] = None, api_version: Union[str, None] = "0.5"
+    ):
+        return await self._do_request_with_retry("POST", url, json=body, api_version=api_version, headers=headers)
 
     async def delete(self, url, params: Dict[str, Union[str, int]] = None, api_version: Union[str, None] = "0.5"):
         return await self._do_request_with_retry(
             "DELETE", url, params=format_params(params or {}), api_version=api_version
         )
 
-    async def _do_request_with_retry(self, method, url, api_version: Union[str, None] = "0.5", **kwargs):
+    async def _do_request_with_retry(
+        self, method, url, api_version: Union[str, None] = "0.5", headers: Dict[str, str] = None, **kwargs
+    ):
         number_of_attempts = 0
         while True:
-            response_body, status, request_id = await self._do_request(method, url, api_version=api_version, **kwargs)
+            response_body, status, request_id = await self._do_request(
+                method, url, api_version=api_version, headers=headers, **kwargs
+            )
             if _status_is_valid(status):
                 return response_body
 
@@ -119,15 +115,22 @@ class ApiClient:
             await _sleep_with_exponentital_backoff(number_of_attempts)
             number_of_attempts += 1
 
-    async def _do_request(self, method, url, api_version: Union[str, None] = "0.5", **kwargs):
+    async def _do_request(
+        self, method, url, headers: Dict[str, str] = None, api_version: Union[str, None] = "0.5", **kwargs
+    ):
         if api_version == "0.5":
             full_url = self._base_url_v0_5 + url
         elif api_version == "0.6":
             full_url = self._base_url_v0_6 + url
         else:
             full_url = self._base_url + url
-        async with client_session.request(method, full_url, headers=self._headers, **kwargs) as response:
-            response_body = await response.json()
+
+        headers = {**self._headers, **(headers or {})}
+        async with client_session.request(method, full_url, headers=headers, **kwargs) as response:
+            if headers["accept"] == "application/json":
+                response_body = await response.json()
+            else:
+                response_body = await response.text()
             status = response.status
             request_id = response.headers.get("X-Request-ID")
             return response_body, status, request_id
