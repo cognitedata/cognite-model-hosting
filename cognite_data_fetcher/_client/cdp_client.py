@@ -34,7 +34,7 @@ class CdpClient(ApiClient):
         return await self.get(url, params=params)
 
     async def get_datapoints_frame(
-        self, time_series: List[Dict[str, Union[int, List[str]]]], granularity: str, start, end=None, limit=None
+        self, time_series: List[Dict[str, Union[int, str]]], granularity: str, start, end=None, limit=None
     ) -> pd.DataFrame:
         ts_ids = [ts["id"] for ts in time_series]
         ts_names = {ts["id"]: ts["name"] for ts in (await self.get_time_series_by_id(ts_ids))["data"]["items"]}
