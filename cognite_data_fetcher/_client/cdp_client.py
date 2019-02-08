@@ -1,5 +1,4 @@
 import io
-from pprint import pprint
 from typing import Dict, List, Union
 from urllib.parse import quote
 
@@ -53,3 +52,22 @@ class CdpClient(ApiClient):
         url = "/timeseries/byids"
         body = {"items": list(set(ids))}
         return await self.post(url, body=body, api_version="0.6")
+
+    async def download_file(self, id: int, target_path: str, chunk_size: int = 100):
+        url = "/files/{}/downloadlink".format(id)
+        download_url = (await self.get(url=url))["data"]
+
+        async with self._client_session.get(download_url) as response:
+            with open(target_path, "wb") as fd:
+                while True:
+                    chunk = await response.content.read(chunk_size)
+                    if not chunk:
+                        break
+                    fd.write(chunk)
+
+    async def download_file_in_memory(self, id):
+        url = "/files/{}/downloadlink".format(id)
+        download_url = (await self.get(url=url))["data"]
+
+        async with self._client_session.get(download_url) as response:
+            return await response.read()

@@ -67,6 +67,7 @@ class ApiClient:
         environment_base_url = os.getenv("COGNITE_BASE_URL")
         environment_num_of_retries = os.getenv("COGNITE_NUM_RETRIES")
 
+        self._client_session = client_session
         self._api_key = api_key or environment_api_key
         self._base_url = base_url or environment_base_url or DEFAULT_BASE_URL
         self._num_of_retries = choose_num_of_retries(num_of_retries, environment_num_of_retries, DEFAULT_NUM_OF_RETRIES)
@@ -126,7 +127,7 @@ class ApiClient:
             full_url = self._base_url + url
 
         headers = {**self._headers, **(headers or {})}
-        async with client_session.request(method, full_url, headers=headers, **kwargs) as response:
+        async with self._client_session.request(method, full_url, headers=headers, **kwargs) as response:
             if headers["accept"] == "application/json":
                 response_body = await response.json()
             else:

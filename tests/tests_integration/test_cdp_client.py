@@ -1,3 +1,7 @@
+import os
+import sys
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -45,3 +49,22 @@ def test_get_time_series_by_id(time_series_in_tenant):
 
     for ts_id in ts_ids:
         assert ts_id in fetched_ids
+
+
+@pytest.fixture()
+def file_in_tenant():
+    file_list = run_until_complete(CLIENT.get("/files".format(CLIENT._project), params={"limit": 1}))
+    return file_list["data"]["items"][0]
+
+
+def test_download_file(file_in_tenant):
+    target_path = os.path.dirname(os.path.abspath(__file__)) + "/file"
+
+    run_until_complete(CLIENT.download_file(file_in_tenant["id"], target_path))
+    assert Path(target_path).is_file()
+    os.remove(target_path)
+
+
+def test_download_file_in_memory(file_in_tenant):
+    file_bytes = run_until_complete(CLIENT.download_file_in_memory(file_in_tenant["id"]))
+    assert isinstance(file_bytes, bytes)
