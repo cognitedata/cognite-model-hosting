@@ -7,9 +7,8 @@ from cognite_data_fetcher._client.api_client import (
     DEFAULT_BASE_URL,
     DEFAULT_NUM_OF_RETRIES,
     ApiClient,
-    ApiKeyError,
-    DataFetcherHttpError,
 )
+from cognite_data_fetcher.exceptions import DataFetcherHttpError, ApiKeyError
 from tests.utils import BASE_URL, BASE_URL_V0_5, run_until_complete
 
 
