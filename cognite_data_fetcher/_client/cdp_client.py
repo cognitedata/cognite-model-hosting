@@ -11,9 +11,6 @@ DATAPOINTS_LIMIT_AGGREGATES = 10000
 
 
 class CdpClient(ApiClient):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     async def get_datapoints(
         self,
         id: int,
@@ -23,7 +20,7 @@ class CdpClient(ApiClient):
         granularity: str = None,
         limit: int = None,
         include_outside_points: bool = False,
-    ):
+    ) -> Dict:
         params = {
             "aggregates": aggregates,
             "granularity": granularity,
@@ -38,7 +35,7 @@ class CdpClient(ApiClient):
 
     async def get_datapoints_frame(
         self, time_series: List[Dict[str, Union[int, List[str]]]], granularity: str, start, end=None, limit=None
-    ):
+    ) -> pd.DataFrame:
         ts_ids = [ts["id"] for ts in time_series]
         ts_names = {ts["id"]: ts["name"] for ts in (await self.get_time_series_by_id(ts_ids))["data"]["items"]}
 
@@ -48,12 +45,12 @@ class CdpClient(ApiClient):
         res = await self.post(url, body=body, headers={"accept": "text/csv"})
         return pd.read_csv(io.StringIO(res))
 
-    async def get_time_series_by_id(self, ids: List[int]):
+    async def get_time_series_by_id(self, ids: List[int]) -> List:
         url = "/timeseries/byids"
         body = {"items": list(set(ids))}
         return await self.post(url, body=body, api_version="0.6")
 
-    async def download_file(self, id: int, target_path: str, chunk_size: int = 100):
+    async def download_file(self, id: int, target_path: str, chunk_size: int = 100) -> None:
         url = "/files/{}/downloadlink".format(id)
         download_url = (await self.get(url=url))["data"]
 
@@ -65,7 +62,7 @@ class CdpClient(ApiClient):
                         break
                     fd.write(chunk)
 
-    async def download_file_in_memory(self, id):
+    async def download_file_in_memory(self, id) -> bytes:
         url = "/files/{}/downloadlink".format(id)
         download_url = (await self.get(url=url))["data"]
 
