@@ -17,7 +17,7 @@ def unset_env_project():
 
 
 @pytest.fixture
-def mock_async_response():
+def http_mock():
     with aioresponses() as mocked:
         mocked.get(BASE_URL + "/login/status", status=200, payload={"data": {"project": "test", "loggedIn": True}})
         yield mocked
