@@ -43,6 +43,7 @@ def _raise_HTTP_error(code, x_request_id, response_body):
     raise DataFetcherHttpError(msg, code, x_request_id, extra=extra)
 
 
-async def _sleep_with_exponentital_backoff(number_of_attempts: int):
-    sleep_time = 2 ** number_of_attempts
+async def _sleep_with_exponentital_backoff(number_of_attempts: int, backoff_factor: int = 0.5, max_backoff: int = 30):
+    backoff = backoff_factor * ((2 ** number_of_attempts) - 1)
+    sleep_time = min(backoff, max_backoff)
     await asyncio.sleep(sleep_time)

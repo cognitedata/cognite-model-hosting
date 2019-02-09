@@ -40,7 +40,9 @@ class ApiClient:
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)
         self._base_url_v0_6 = self._base_url + "/api/0.6/projects/{}".format(self._project)
 
-    async def get(self, url: str, params: Dict[str, Union[str, int]] = None, api_version: Union[str, None] = "0.5"):
+    async def get(
+        self, url: str, params: Dict[str, Union[str, int, bool]] = None, api_version: Union[str, None] = "0.5"
+    ):
         return await self._do_request_with_retry(
             "GET", url, params=utils.format_params(params or {}), api_version=api_version
         )
@@ -50,13 +52,13 @@ class ApiClient:
     ):
         return await self._do_request_with_retry("POST", url, json=body, api_version=api_version, headers=headers)
 
-    async def delete(self, url, params: Dict[str, Union[str, int]] = None, api_version: Union[str, None] = "0.5"):
+    async def delete(self, url, params: Dict[str, Union[str, int, bool]] = None, api_version: Union[str, None] = "0.5"):
         return await self._do_request_with_retry(
             "DELETE", url, params=utils.format_params(params or {}), api_version=api_version
         )
 
     async def _do_request_with_retry(
-        self, method, url, api_version: Union[str, None] = "0.5", headers: Dict[str, str] = None, **kwargs
+        self, method, url, api_version: Union[str, None], headers: Dict[str, str] = None, **kwargs
     ):
         number_of_attempts = 0
         while True:
@@ -75,16 +77,8 @@ class ApiClient:
             await utils._sleep_with_exponentital_backoff(number_of_attempts)
             number_of_attempts += 1
 
-    async def _do_request(
-        self, method, url, headers: Dict[str, str] = None, api_version: Union[str, None] = "0.5", **kwargs
-    ):
-        if api_version == "0.5":
-            full_url = self._base_url_v0_5 + url
-        elif api_version == "0.6":
-            full_url = self._base_url_v0_6 + url
-        else:
-            full_url = self._base_url + url
-
+    async def _do_request(self, method, url, api_version: Union[str, None], headers: Dict[str, str] = None, **kwargs):
+        full_url = self._get_full_url(url, api_version)
         headers = {**self._headers, **(headers or {})}
         async with self._client_session.request(method, full_url, headers=headers, **kwargs) as response:
             if headers["accept"] == "application/json":
@@ -102,3 +96,10 @@ class ApiClient:
         if not response["data"]["loggedIn"]:
             raise ApiKeyError("Invalid API Key")
         return response["data"]["project"]
+
+    def _get_full_url(self, url, api_version: str = None):
+        if api_version == "0.5":
+            return self._base_url_v0_5 + url
+        elif api_version == "0.6":
+            return self._base_url_v0_6 + url
+        return self._base_url + url
