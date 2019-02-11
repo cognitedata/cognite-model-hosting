@@ -53,7 +53,7 @@ podTemplate(
             }
             stage('Test and coverage report') {
                 sh("pyenv local 3.5.5 3.6.6 system")
-                sh("pipenv run tox")
+                sh("pipenv run tox -p all")
                 junit(allowEmptyResults: true, testResults: '**/test-report.xml')
                 summarizeTestResults()
             }
