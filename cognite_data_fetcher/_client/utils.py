@@ -65,7 +65,7 @@ def _time_ago_to_ms(time_ago_string: str) -> int:
     raise ValueError("Invalid time-ago representation")
 
 
-def _interval_to_ms(start: Union[str, int], end: Union[str, int, None]) -> Tuple[int, int]:
+def interval_to_ms(start: Union[str, int], end: Union[str, int, None]) -> Tuple[int, int]:
     """Returns the ms representation of start-end-interval whether it is time-ago, datetime or None."""
     time_now = int(round(time.time() * 1000))
     if isinstance(start, str):
@@ -85,3 +85,20 @@ def _interval_to_ms(start: Union[str, int], end: Union[str, int, None]) -> Tuple
         raise ValueError("'end' must be str, int or None")
 
     return start, end
+
+
+def granularity_to_ms(time_string):
+    """Returns millisecond representation of granularity time string"""
+    magnitude = int("".join([c for c in time_string if c.isdigit()]))
+    unit = "".join([c for c in time_string if c.isalpha()])
+    unit_in_ms = {
+        "s": 1000,
+        "second": 1000,
+        "m": 60000,
+        "minute": 60000,
+        "h": 3600000,
+        "hour": 3600000,
+        "d": 86400000,
+        "day": 86400000,
+    }
+    return magnitude * unit_in_ms[unit]

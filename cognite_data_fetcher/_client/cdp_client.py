@@ -3,7 +3,7 @@ from typing import Dict, List, Union
 from urllib.parse import quote
 
 import pandas as pd
-from cognite.client import _utils
+from cognite_data_fetcher._client import utils
 
 from cognite_data_fetcher._client.api_client import ApiClient
 
@@ -21,7 +21,7 @@ class CdpClient(ApiClient):
         granularity: str = None,
         include_outside_points: bool = False,
     ) -> pd.DataFrame:
-        start, end = _utils.interval_to_ms(start, end)
+        start, end = utils.interval_to_ms(start, end)
         limit = DATAPOINTS_LIMIT_AGGREGATES if aggregate else DATAPOINTS_LIMIT
         params = {
             "aggregates": aggregate,
@@ -41,7 +41,7 @@ class CdpClient(ApiClient):
                 break
             datapoints.append(res)
             latest_timestamp = int(datapoints[-1][-1]["timestamp"])
-            params["start"] = latest_timestamp + (_utils.granularity_to_ms(granularity) if granularity else 1)
+            params["start"] = latest_timestamp + (utils.granularity_to_ms(granularity) if granularity else 1)
         dps = []
         [dps.extend(el) for el in datapoints]
         df = pd.DataFrame(dps)
@@ -56,7 +56,7 @@ class CdpClient(ApiClient):
         start: Union[str, int],
         end: Union[str, int, None] = None,
     ) -> pd.DataFrame:
-        start, end = _utils.interval_to_ms(start, end)
+        start, end = utils.interval_to_ms(start, end)
         limit = int(DATAPOINTS_LIMIT_AGGREGATES / len(time_series))
 
         ts_ids = [ts["id"] for ts in time_series]
@@ -73,7 +73,7 @@ class CdpClient(ApiClient):
             if dataframes[-1].empty:
                 break
             latest_timestamp = int(dataframes[-1].iloc[-1, 0])
-            body["start"] = latest_timestamp + _utils.granularity_to_ms(granularity)
+            body["start"] = latest_timestamp + utils.granularity_to_ms(granularity)
         return pd.concat(dataframes).reset_index(drop=True)
 
     async def get_time_series_by_id(self, ids: List[int]) -> List:
