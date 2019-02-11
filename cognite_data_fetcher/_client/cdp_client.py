@@ -44,7 +44,10 @@ class CdpClient(ApiClient):
             params["start"] = latest_timestamp + (_utils.granularity_to_ms(granularity) if granularity else 1)
         dps = []
         [dps.extend(el) for el in datapoints]
-        return pd.DataFrame(dps)
+        df = pd.DataFrame(dps)
+        if include_outside_points:
+            df.drop_duplicates(inplace=True)
+        return df
 
     async def get_datapoints_frame(
         self,
