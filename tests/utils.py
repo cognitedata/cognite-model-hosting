@@ -1,4 +1,6 @@
 import asyncio
+import random
+import string
 
 BASE_URL = "https://api.cognitedata.com"
 BASE_URL_V0_5 = BASE_URL + "/api/0.5/projects/test"
@@ -10,3 +12,7 @@ def run_until_complete(*futures):
     if len(futures) == 1:
         return res[0]
     return res
+
+
+def random_string(length: int = 5):
+    return "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))

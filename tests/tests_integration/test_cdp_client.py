@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from cognite.data_fetcher._client.cdp_client import CdpClient
 
-from tests.utils import run_until_complete
+from tests.utils import random_string, run_until_complete
 
 CLIENT = None
 
@@ -59,7 +59,7 @@ def file_in_tenant():
 
 
 def test_download_file(file_in_tenant):
-    target_path = os.path.dirname(os.path.abspath(__file__)) + "/file"
+    target_path = os.path.dirname(os.path.abspath(__file__)) + "/{}".format(random_string())
 
     run_until_complete(CLIENT.download_file(file_in_tenant["id"], target_path))
     assert Path(target_path).is_file()
