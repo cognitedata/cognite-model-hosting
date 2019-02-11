@@ -14,8 +14,6 @@ def format_params(d: Dict) -> Dict:
             continue
         elif isinstance(v, bool):
             formatted[k] = str(v).lower()
-        elif isinstance(v, list):
-            formatted[k] = str(v)
         else:
             formatted[k] = v
     return formatted

@@ -24,7 +24,7 @@ class CdpClient(ApiClient):
         start, end = _utils.interval_to_ms(start, end)
         limit = DATAPOINTS_LIMIT_AGGREGATES if aggregate else DATAPOINTS_LIMIT
         params = {
-            "aggregates": [aggregate] if aggregate else None,
+            "aggregates": aggregate,
             "granularity": granularity,
             "limit": limit,
             "start": start,
