@@ -30,8 +30,8 @@ class CdpClient(ApiClient):
             "end": end,
             "includeOutsidePoints": include_outside_points,
         }
-        ts = await self.get_time_series_by_id([id])
-        url = "/timeseries/data/{}".format(quote(ts["data"]["items"][0]["name"], safe=""))
+        ts = (await self.get_time_series_by_id([id]))[0]
+        url = "/timeseries/data/{}".format(quote(ts["name"], safe=""))
         datapoints = []
         while (not datapoints or len(datapoints[-1]) == limit) and params["end"] > params["start"]:
             res = await self.get(url, params=params)
@@ -56,10 +56,10 @@ class CdpClient(ApiClient):
         end: Union[str, int, None] = None,
     ) -> pd.DataFrame:
         start, end = utils.interval_to_ms(start, end)
-        limit = int(DATAPOINTS_LIMIT_AGGREGATES / len(time_series))
+        limit = DATAPOINTS_LIMIT // len(time_series)
 
         ts_ids = [ts["id"] for ts in time_series]
-        ts_names = {ts["id"]: ts["name"] for ts in (await self.get_time_series_by_id(ts_ids))["data"]["items"]}
+        ts_names = {ts["id"]: ts["name"] for ts in (await self.get_time_series_by_id(ts_ids))}
 
         time_series_by_name = [{"name": ts_names[ts["id"]], "aggregates": [ts["aggregate"]]} for ts in time_series]
         body = {"items": time_series_by_name, "granularity": granularity, "start": start, "end": end, "limit": limit}
@@ -73,14 +73,15 @@ class CdpClient(ApiClient):
                 break
             latest_timestamp = int(dataframes[-1].iloc[-1, 0])
             body["start"] = latest_timestamp + utils.granularity_to_ms(granularity)
+            print()
         return pd.concat(dataframes).reset_index(drop=True)
 
     async def get_time_series_by_id(self, ids: List[int]) -> List:
         url = "/timeseries/byids"
         body = {"items": list(set(ids))}
-        return await self.post(url, body=body, api_version="0.6")
+        return (await self.post(url, body=body, api_version="0.6"))["data"]["items"]
 
-    async def download_file(self, id: int, target_path: str, chunk_size: int = 100) -> None:
+    async def download_file(self, id: int, target_path: str, chunk_size: int = 2 ** 21) -> None:
         url = "/files/{}/downloadlink".format(id)
         download_url = (await self.get(url=url))["data"]
 

@@ -46,7 +46,7 @@ def test_get_time_series_by_id(time_series_in_tenant):
     ts_ids = [ts["id"] for ts in time_series_in_tenant]
     res = run_until_complete(CLIENT.get_time_series_by_id(ts_ids))
 
-    fetched_ids = [ts["id"] for ts in res["data"]["items"]]
+    fetched_ids = [ts["id"] for ts in res]
 
     for ts_id in ts_ids:
         assert ts_id in fetched_ids
