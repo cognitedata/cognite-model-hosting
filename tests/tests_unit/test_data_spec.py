@@ -1,4 +1,4 @@
-from cognite_data_fetcher.data_spec import DataSpec
+from cognite import DataSpec
 
 
 def test_create_data_spec():

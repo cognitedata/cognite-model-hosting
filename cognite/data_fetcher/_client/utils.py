@@ -2,9 +2,9 @@ import asyncio
 import json
 import re
 import time
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Tuple, Union
 
-from cognite_data_fetcher.exceptions import DataFetcherHttpError
+from cognite.data_fetcher.exceptions import DataFetcherHttpError
 
 
 def format_params(d: Dict) -> Dict:

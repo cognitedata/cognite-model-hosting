@@ -1,4 +1,4 @@
-from cognite_data_fetcher._client import utils
+from cognite.data_fetcher._client import utils
 
 
 def test_format_params():
