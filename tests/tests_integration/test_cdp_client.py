@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-
 from cognite.data_fetcher._client.cdp_client import CdpClient
+
 from tests.utils import run_until_complete
 
 CLIENT = None

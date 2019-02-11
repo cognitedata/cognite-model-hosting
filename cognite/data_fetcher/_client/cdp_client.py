@@ -4,8 +4,7 @@ from urllib.parse import quote
 
 import pandas as pd
 from cognite.data_fetcher._client import utils
-
-from cognite.data_fetcher._client import ApiClient
+from cognite.data_fetcher._client.api_client import ApiClient
 
 DATAPOINTS_LIMIT = 100000
 DATAPOINTS_LIMIT_AGGREGATES = 10000
