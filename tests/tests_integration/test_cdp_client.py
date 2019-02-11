@@ -24,20 +24,22 @@ def time_series_in_tenant():
     return ts_list["data"]["items"]
 
 
-def test_get_datapoints(time_series_in_tenant):
+def test_get_datapoints_frame_single(time_series_in_tenant):
     ts_id = time_series_in_tenant[0]["id"]
-    ts_name = time_series_in_tenant[0]["name"]
-    dps = run_until_complete(CLIENT.get_datapoints(ts_id, start="900d-ago", limit=10))
-    assert ts_name == dps["data"]["items"][0]["name"]
-    assert len(dps["data"]["items"][0]["datapoints"]) > 0
+    df = run_until_complete(CLIENT.get_datapoints_frame_single(ts_id, start=1498044290000, end=1498044700000))
+    assert df.shape[1] == 2
+    assert df.shape[0] > 0
 
 
 def test_get_datapoints_frame(time_series_in_tenant):
     time_series = [{"id": ts["id"], "aggregate": "min"} for ts in time_series_in_tenant]
     time_series.append({"id": time_series_in_tenant[0]["id"], "aggregate": "max"})
-    res = run_until_complete(CLIENT.get_datapoints_frame(time_series, granularity="1h", start="900d-ago", limit=10))
+    res = run_until_complete(
+        CLIENT.get_datapoints_frame(time_series, granularity="1m", start=1498044290000, end=1498044700000)
+    )
     assert isinstance(res, pd.DataFrame)
-    assert (10, 5) == res.shape
+    assert 5 == res.shape[1]
+    assert res.shape[0] > 0
 
 
 def test_get_time_series_by_id(time_series_in_tenant):

@@ -40,9 +40,7 @@ class ApiClient:
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)
         self._base_url_v0_6 = self._base_url + "/api/0.6/projects/{}".format(self._project)
 
-    async def get(
-        self, url: str, params: Dict[str, Union[str, int, bool]] = None, api_version: Union[str, None] = "0.5"
-    ):
+    async def get(self, url: str, params: Dict[str, Any] = None, api_version: Union[str, None] = "0.5"):
         return await self._do_request_with_retry(
             "GET", url, params=utils.format_params(params or {}), api_version=api_version
         )
@@ -52,7 +50,7 @@ class ApiClient:
     ):
         return await self._do_request_with_retry("POST", url, json=body, api_version=api_version, headers=headers)
 
-    async def delete(self, url, params: Dict[str, Union[str, int, bool]] = None, api_version: Union[str, None] = "0.5"):
+    async def delete(self, url, params: Dict[str, Any] = None, api_version: Union[str, None] = "0.5"):
         return await self._do_request_with_retry(
             "DELETE", url, params=utils.format_params(params or {}), api_version=api_version
         )
