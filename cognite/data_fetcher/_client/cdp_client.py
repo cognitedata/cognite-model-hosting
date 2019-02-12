@@ -73,7 +73,6 @@ class CdpClient(ApiClient):
                 break
             latest_timestamp = int(dataframes[-1].iloc[-1, 0])
             body["start"] = latest_timestamp + utils.granularity_to_ms(granularity)
-            print()
         return pd.concat(dataframes).reset_index(drop=True)
 
     async def get_time_series_by_id(self, ids: List[int]) -> List:
