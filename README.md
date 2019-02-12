@@ -1,6 +1,7 @@
 <a href="https://cognite.com/">
     <img src="https://github.com/cognitedata/cognite-graphic-profile/blob/master/cognite_logo.png" alt="Cognite logo" title="Cognite" align="right" height="80" />
 </a>
+
 Cognite Data Fetcher
 ====================
 [![build](https://webhooks.dev.cognite.ai/build/buildStatus/icon?job=github-builds/cognite-data-fetcher/master)](https://jenkins.cognite.ai/job/github-builds/job/cognite-data-fetcher/job/master/)
