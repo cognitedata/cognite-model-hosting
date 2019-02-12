@@ -62,8 +62,7 @@ podTemplate(
                 step([$class: 'CoberturaPublisher', coberturaReportFile: 'coverage.xml'])
             }
             stage('Build') {
-                sh("python3 setup.py sdist")
-                sh("python3 setup.py bdist_wheel")
+                sh("python3 setup.py sdist bdist_wheel")
             }
 
             def deployToPyPi = false
