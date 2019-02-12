@@ -8,7 +8,10 @@ class _BaseSpec:
     _schema = None  # Set by subclass
 
     def dump(self):
-        dumped = self._schema.dump(self)
+        try:
+            dumped = self._schema.dump(self)
+        except ValidationError as e:
+            raise ValidationException(e.messages) from e
         errors = self._schema.validate(dumped)
         if errors:
             raise ValidationException(errors)
@@ -33,7 +36,7 @@ class _BaseSpec:
         return cls.load(json.loads(s))
 
     def __str__(self):
-        return str(self.__dict__)
+        return self.to_json()
 
     def __repr__(self):
         return self.__str__()
@@ -81,12 +84,16 @@ class DataSpec(_BaseSpec):
         self.time_series = time_series or {}
         self.files = files or {}
 
+        self.validate()
+
 
 class ScheduleDataSpec(_BaseSpec):
     def __init__(self, stride: str, window_size: str, time_series: Dict[str, ScheduleTimeSeriesSpec] = None):
         self.stride = stride
         self.window_size = window_size
         self.time_series = time_series or {}
+
+        self.validate()
 
 
 class ValidationException(Exception):

@@ -13,7 +13,7 @@ from cognite.data_fetcher.data_spec import (
 )
 
 TestCase = namedtuple("TestCase", ["name", "obj", "primitive"])
-InvalidTestCase = namedtuple("TestCase", ["name", "obj", "primitive", "errors"])
+InvalidTestCase = namedtuple("TestCase", ["name", "type", "constructor", "primitive", "errors"])
 
 valid_test_cases = [
     TestCase("minimal_file_spec", FileSpec(id=6), {"id": 6}),
@@ -65,41 +65,78 @@ valid_test_cases = [
 ]
 
 invalid_test_cases = [
-    InvalidTestCase("file_missing_id", FileSpec(id=None), {}, {"id": ["Missing data for required field."]}),
     InvalidTestCase(
-        "time_series_missing_fields",
-        TimeSeriesSpec(id=None, start=None, end=None),
-        {},
-        {
+        name="file_missing_id",
+        type=FileSpec,
+        constructor=lambda: FileSpec(id=None),
+        primitive={},
+        errors={"id": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="time_series_missing_fields",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=None, start=None, end=None),
+        primitive={},
+        errors={
             "id": ["Missing data for required field."],
             "start": ["Missing data for required field."],
             "end": ["Missing data for required field."],
         },
     ),
     InvalidTestCase(
-        "time_series_aggregates_but_not_granularity",
-        TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg"),
-        {"id": 6, "start": 123, "end": 234, "aggregate": "avg"},
-        {"granularity": ["granularity must be specified for aggregates."]},
+        name="time_series_aggregates_but_not_granularity",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg"),
+        primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg"},
+        errors={"granularity": ["granularity must be specified for aggregates."]},
     ),
     InvalidTestCase(
-        "time_series_aggregates_but_include_outside_points",
-        TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m", include_outside_points=True),
-        {"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m", "includeOutsidePoints": True},
-        {"includeOutsidePoints": ["Can't include outside points for aggregates."]},
+        name="time_series_aggregates_but_include_outside_points",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(
+            id=6, start=123, end=234, aggregate="avg", granularity="1m", include_outside_points=True
+        ),
+        primitive={
+            "id": 6,
+            "start": 123,
+            "end": 234,
+            "aggregate": "avg",
+            "granularity": "1m",
+            "includeOutsidePoints": True,
+        },
+        errors={"includeOutsidePoints": ["Can't include outside points for aggregates."]},
     ),
     InvalidTestCase(
-        "schedule_time_series_with_start_end",
-        ScheduleTimeSeriesSpec,
-        {"id": 6, "start": 123, "end": 234},
-        {"start": ["Unknown field."], "end": ["Unknown field."]},
+        name="schedule_time_series_with_start_end",
+        type=ScheduleTimeSeriesSpec,
+        constructor=None,
+        primitive={"id": 6, "start": 123, "end": 234},
+        errors={"start": ["Unknown field."], "end": ["Unknown field."]},
     ),
     InvalidTestCase(
-        "schedule_data_spec_missing_fields",
-        ScheduleDataSpec(window_size=None, stride=None),
-        {},
-        {"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
+        name="schedule_data_spec_missing_fields",
+        type=ScheduleDataSpec,
+        constructor=lambda: ScheduleDataSpec(window_size=None, stride=None),
+        primitive={},
+        errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
     ),
+    InvalidTestCase(
+        name="data_spec_nested_errors",
+        type=DataSpec,
+        constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
+        primitive={"files": {"f1": {}}},
+        errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
+    ),
+    # TODO add when Marshmallow fixes inconsistencies (https://github.com/marshmallow-code/marshmallow/issues/1132)
+    # InvalidTestCase(
+    #     name="schedule_data_spec_nested_errors",
+    #     type=ScheduleDataSpec,
+    #     constructor=lambda: ScheduleDataSpec(
+    #         stride="1m", window_size="5m", time_series={"ts1": ScheduleTimeSeriesSpec(id="abc")}
+    #     ),
+    #     primitive={"stride": "1m", "windowSize": "5m", "timeSeries": {"ts1": {"id": "abc"}}},
+    #     errors={"timeSeries": {"ts1": {"value": {"id": ["Not a valid integer."]}}}},
+    # ),
 ]
 
 
@@ -122,36 +159,32 @@ def test_valid_json_serializable(name, obj, primitive):
     assert from_json == obj, "\nFrom JSON: ({})\n{}\nObj:({})\n{}\n".format(type(from_json), from_json, type(obj), obj)
 
 
-@pytest.mark.parametrize("name, obj, primitive, errors", invalid_test_cases)
-def test_invalid(name, obj, primitive, errors):
-    if type(obj) == type:
-        should_fail = {"load": lambda: obj.load(primitive), "from_json": lambda: obj.from_json(json.dumps(primitive))}
-    else:
-        should_fail = {
-            "dump": obj.dump,
-            "validate": obj.validate,
-            "load": lambda: obj.__class__.load(primitive),
-            "to_json": obj.to_json,
-            "from_json": lambda: obj.__class__.from_json(json.dumps(primitive)),
-        }
+def remove_defaultdict_in_errors(d):
+    return json.loads(json.dumps(d))
 
-    for name, method in should_fail.items():
+
+@pytest.mark.parametrize("name, type, constructor, primitive, errors", invalid_test_cases)
+def test_invalid(name, type, constructor, primitive, errors):
+    should_fail = {"load": lambda: type.load(primitive), "from_json": lambda: type.from_json(json.dumps(primitive))}
+    if constructor is not None:
+        if type in (DataSpec, ScheduleDataSpec):
+            should_fail["constructor"] = constructor
+        else:
+            should_fail["dump"] = constructor().dump
+            should_fail["to_json"] = constructor().to_json
+
+    for method_name, method in should_fail.items():
         with pytest.raises(ValidationException) as excinfo:
             method()
 
-        if excinfo.value.errors != errors:
-            pytest.fail("\nMethod: {}\nErrors:\n{}\nExpected:\n{}\n".format(name, excinfo.value.errors, errors))
+        actual_errors = remove_defaultdict_in_errors(excinfo.value.errors)
+        if actual_errors != errors:
+            pytest.fail("\nMethod: {}\nErrors:\n{}\nExpected:\n{}\n".format(name, actual_errors, errors))
 
 
 @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
 def test_valid_str_repr(name, obj, primitive):
-    assert str(obj) == str(obj.__dict__)
-
-
-@pytest.mark.parametrize("name, obj, primitive, errors", invalid_test_cases)
-def test_invalid_str_repr(name, obj, primitive, errors):
-    if type(obj) != type:
-        assert str(obj) == str(obj.__dict__)
+    assert str(obj) == obj.to_json()
 
 
 def test_validation_exception_str_repr():
