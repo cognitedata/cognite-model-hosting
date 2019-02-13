@@ -2,8 +2,8 @@ import asyncio
 
 import pandas as pd
 import pytest
-from cognite.data_fetcher._client.cdp_client import CdpClient
 
+from cognite.data_fetcher._client.cdp_client import CdpClient
 from tests.utils import BASE_URL_V0_5, BASE_URL_V0_6
 
 
