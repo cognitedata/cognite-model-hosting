@@ -101,6 +101,13 @@ invalid_test_cases = [
         errors={"includeOutsidePoints": ["Can't include outside points for aggregates."]},
     ),
     InvalidTestCase(
+        name="time_series_not_aggregate_but_granularity",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, granularity="1m"),
+        primitive={"id": 6, "start": 123, "end": 234, "granularity": "1m"},
+        errors={"granularity": ["granularity can only be specified for aggregates."]},
+    ),
+    InvalidTestCase(
         name="schedule_time_series_with_start_end",
         type=ScheduleTimeSeriesSpec,
         constructor=None,

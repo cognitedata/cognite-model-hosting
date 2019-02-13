@@ -143,6 +143,9 @@ class _TimeSeriesSpecSchema(_BaseSchema):
                 errors["granularity"] = ["granularity must be specified for aggregates."]
             if "include_outside_points" in data and data["include_outside_points"]:
                 errors["includeOutsidePoints"] = ["Can't include outside points for aggregates."]
+        else:
+            if "granularity" in data:
+                errors["granularity"] = ["granularity can only be specified for aggregates."]
 
         if errors:
             raise ValidationError(errors)
