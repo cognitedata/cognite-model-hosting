@@ -16,6 +16,7 @@ tox-pyenv = "*"
 [packages]
 pandas = "*"
 aiohttp = "*"
+marshmallow = "==3.0.0rc4"
 
 [requires]
 python_version = "3.7"
