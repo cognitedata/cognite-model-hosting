@@ -6,8 +6,9 @@ from cognite.data_fetcher.exceptions import SpecValidationError
 
 
 class FilesFetcher:
-    def __init__(self, file_specs: Dict[str, FileSpec]):
+    def __init__(self, file_specs: Dict[str, FileSpec], cdp_client: CdpClient):
         self._file_specs = file_specs
+        self._cdp_client = cdp_client
 
     @property
     def aliases(self) -> List:
@@ -15,8 +16,9 @@ class FilesFetcher:
 
 
 class TimeSeriesFetcher:
-    def __init__(self, time_series_specs: Dict[str, TimeSeriesSpec]):
+    def __init__(self, time_series_specs: Dict[str, TimeSeriesSpec], cdp_client: CdpClient):
         self._time_series_specs = time_series_specs
+        self._cdp_client = cdp_client
 
     @property
     def aliases(self) -> List:
@@ -31,8 +33,8 @@ class DataFetcher:
         self._data_spec.validate()
         self._cdp_client = CdpClient(api_key=api_key, project=project, base_url=base_url)
 
-        self._files_fetcher = FilesFetcher(self._data_spec.files)
-        self._time_series_fetcher = TimeSeriesFetcher(self._data_spec.time_series)
+        self._files_fetcher = FilesFetcher(self._data_spec.files, self._cdp_client)
+        self._time_series_fetcher = TimeSeriesFetcher(self._data_spec.time_series, self._cdp_client)
 
     def _load_data_spec(self, data_spec):
         if type(data_spec) == DataSpec:
