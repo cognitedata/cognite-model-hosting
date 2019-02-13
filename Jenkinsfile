@@ -48,8 +48,9 @@ podTemplate(
             stage('Install dependencies') {
                 sh("pipenv sync --dev")
             }
-            stage('Check code style & remove typehints') {
+            stage('Check code style') {
                 sh("pipenv run black -l 120 --check .")
+                sh("pipenv run isort -w 120 -m 3 -tc -rc --check-only .")
             }
             stage('Test and coverage report') {
                 sh("pyenv local 3.5.5 3.6.6 system")
