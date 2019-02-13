@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, Union
 
 import aiohttp
+
 import cognite.data_fetcher
 from cognite.data_fetcher._client import utils
 from cognite.data_fetcher.exceptions import ApiKeyError

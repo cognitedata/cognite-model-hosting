@@ -3,6 +3,7 @@ from typing import Dict, List, Union
 from urllib.parse import quote
 
 import pandas as pd
+
 from cognite.data_fetcher._client import utils
 from cognite.data_fetcher._client.api_client import ApiClient
 
