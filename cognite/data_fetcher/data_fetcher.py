@@ -1,5 +1,6 @@
 from typing import Dict, List, Union
 
+from cognite.data_fetcher._client.cdp_client import CdpClient
 from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.data_fetcher.exceptions import SpecValidationError
 
@@ -23,9 +24,15 @@ class TimeSeriesFetcher:
 
 
 class DataFetcher:
-    def __init__(self, data_spec: Union[DataSpec, Dict, str]):
+    def __init__(
+        self, data_spec: Union[DataSpec, Dict, str], api_key: str = None, project: str = None, base_url: str = None
+    ):
         self._data_spec = self._load_data_spec(data_spec)
         self._data_spec.validate()
+        self._cdp_client = CdpClient(api_key=api_key, project=project, base_url=base_url)
+
+        self._files_fetcher = FilesFetcher(self._data_spec.files)
+        self._time_series_fetcher = TimeSeriesFetcher(self._data_spec.time_series)
 
     def _load_data_spec(self, data_spec):
         if type(data_spec) == DataSpec:
@@ -42,8 +49,8 @@ class DataFetcher:
 
     @property
     def files(self) -> FilesFetcher:
-        return FilesFetcher(self._data_spec.files)
+        return self._files_fetcher
 
     @property
     def time_series(self) -> TimeSeriesFetcher:
-        return TimeSeriesFetcher(self._data_spec.time_series)
+        return self._time_series_fetcher
