@@ -93,7 +93,7 @@ class CdpClient(ApiClient):
                         break
                     fd.write(chunk)
 
-    async def download_file_in_memory(self, id) -> bytes:
+    async def download_file_to_memory(self, id) -> bytes:
         url = "/files/{}/downloadlink".format(id)
         download_url = (await self.get(url=url))["data"]
 
