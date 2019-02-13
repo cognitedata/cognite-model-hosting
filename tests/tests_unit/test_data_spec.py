@@ -3,14 +3,8 @@ from collections import namedtuple
 
 import pytest
 
-from cognite.data_fetcher.data_spec import (
-    DataSpec,
-    FileSpec,
-    ScheduleDataSpec,
-    ScheduleTimeSeriesSpec,
-    TimeSeriesSpec,
-    ValidationException,
-)
+from cognite.data_fetcher.data_spec import DataSpec, FileSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
+from cognite.data_fetcher.exceptions import SpecValidationError
 
 TestCase = namedtuple("TestCase", ["name", "obj", "primitive"])
 InvalidTestCase = namedtuple("TestCase", ["name", "type", "constructor", "primitive", "errors"])
@@ -107,6 +101,13 @@ invalid_test_cases = [
         errors={"includeOutsidePoints": ["Can't include outside points for aggregates."]},
     ),
     InvalidTestCase(
+        name="time_series_not_aggregate_but_granularity",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, granularity="1m"),
+        primitive={"id": 6, "start": 123, "end": 234, "granularity": "1m"},
+        errors={"granularity": ["granularity can only be specified for aggregates."]},
+    ),
+    InvalidTestCase(
         name="schedule_time_series_with_start_end",
         type=ScheduleTimeSeriesSpec,
         constructor=None,
@@ -174,7 +175,7 @@ def test_invalid(name, type, constructor, primitive, errors):
             should_fail["to_json"] = constructor().to_json
 
     for method_name, method in should_fail.items():
-        with pytest.raises(ValidationException) as excinfo:
+        with pytest.raises(SpecValidationError) as excinfo:
             method()
 
         actual_errors = remove_defaultdict_in_errors(excinfo.value.errors)
@@ -188,5 +189,16 @@ def test_valid_str_repr(name, obj, primitive):
 
 
 def test_validation_exception_str_repr():
-    e = ValidationException({"key": "value"})
+    e = SpecValidationError({"key": "value"})
     assert str(e) == '{\n    "key": "value"\n}'
+
+
+def test_copy():
+    data_spec = DataSpec(files={"f1": FileSpec(id=123)})
+    data_spec_copied = data_spec.copy()
+
+    assert data_spec == data_spec_copied
+
+    data_spec.files["f1"].id = 234
+
+    assert data_spec != data_spec_copied

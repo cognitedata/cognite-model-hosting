@@ -3,6 +3,8 @@ from typing import Dict
 
 from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates_schema
 
+from cognite.data_fetcher.exceptions import SpecValidationError
+
 
 class _BaseSpec:
     _schema = None  # Set by subclass
@@ -11,10 +13,10 @@ class _BaseSpec:
         try:
             dumped = self._schema.dump(self)
         except ValidationError as e:
-            raise ValidationException(e.messages) from e
+            raise SpecValidationError(e.messages) from e
         errors = self._schema.validate(dumped)
         if errors:
-            raise ValidationException(errors)
+            raise SpecValidationError(errors)
 
         return dumped
 
@@ -26,7 +28,7 @@ class _BaseSpec:
         try:
             return cls._schema.load(data)
         except ValidationError as e:
-            raise ValidationException(e.messages) from e
+            raise SpecValidationError(e.messages) from e
 
     def to_json(self):
         return json.dumps(self.dump(), indent=4, sort_keys=True)
@@ -34,6 +36,9 @@ class _BaseSpec:
     @classmethod
     def from_json(cls, s: str):
         return cls.load(json.loads(s))
+
+    def copy(self):
+        return self.from_json(self.to_json())
 
     def __str__(self):
         return self.to_json()
@@ -96,14 +101,6 @@ class ScheduleDataSpec(_BaseSpec):
         self.validate()
 
 
-class ValidationException(Exception):
-    def __init__(self, errors):
-        self.errors = errors
-
-    def __str__(self):
-        return json.dumps(self.errors, indent=4, sort_keys=True)
-
-
 class _BaseSchema(Schema):
     _ignore_values = [None, {}]
     _default_spec = None
@@ -146,6 +143,9 @@ class _TimeSeriesSpecSchema(_BaseSchema):
                 errors["granularity"] = ["granularity must be specified for aggregates."]
             if "include_outside_points" in data and data["include_outside_points"]:
                 errors["includeOutsidePoints"] = ["Can't include outside points for aggregates."]
+        else:
+            if "granularity" in data:
+                errors["granularity"] = ["granularity can only be specified for aggregates."]
 
         if errors:
             raise ValidationError(errors)
