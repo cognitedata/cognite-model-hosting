@@ -2,9 +2,9 @@ import json
 from datetime import datetime
 from typing import Dict, Union
 
-from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates_schema
+from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates, validates_schema
 
-from cognite.data_fetcher._utils import calculate_window_intervals, interval_to_ms, granularity_to_ms
+from cognite.data_fetcher._utils import calculate_window_intervals, granularity_to_ms, interval_to_ms
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -166,6 +166,13 @@ class _TimeSeriesSpecSchema(_BaseSchema):
         if errors:
             raise ValidationError(errors)
 
+    @validates("granularity")
+    def validate_granularity(self, granularity):
+        try:
+            granularity_to_ms(granularity)
+        except ValueError as e:
+            raise ValidationError("Invalid granularity format. Must be e.g. '1d', '2hour', '60second'") from e
+
 
 class _FileSpecSchema(_BaseSchema):
     _default_spec = FileSpec
@@ -190,6 +197,21 @@ class _ScheduleDataSpecSchema(_BaseSchema):
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
+
+    @validates("stride")
+    def validate_stride(self, stride):
+        try:
+            if granularity_to_ms(stride) < 60000:
+                raise ValidationError("Stride must be at least 60 seconds")
+        except ValueError as e:
+            raise ValidationError("Invalid stride format. Must be e.g. '1d', '2hour', '60second'") from e
+
+    @validates("windowSize")
+    def validate_window_size(self, window_size):
+        try:
+            granularity_to_ms(window_size)
+        except ValueError as e:
+            raise ValidationError("Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'") from e
 
 
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()

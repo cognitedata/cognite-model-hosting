@@ -104,6 +104,13 @@ invalid_test_cases = [
         errors={"granularity": ["granularity can only be specified for aggregates."]},
     ),
     InvalidTestCase(
+        name="time_series_invalid_granularity",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, granularity="bla"),
+        primitive={"id": 6, "start": 123, "end": 234, "granularity": "bla"},
+        errors={"granularity": ["Invalid granularity format. Must be e.g. '1d', '2hour', '60second'"]},
+    ),
+    InvalidTestCase(
         name="schedule_time_series_with_start_end",
         type=ScheduleTimeSeriesSpec,
         constructor=None,
@@ -116,6 +123,23 @@ invalid_test_cases = [
         constructor=lambda: ScheduleDataSpec(window_size=None, stride=None),
         primitive={},
         errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="schedule_data_spec_invalid_stride_window_size",
+        type=ScheduleDataSpec,
+        constructor=lambda: ScheduleDataSpec(window_size="blabla", stride="blabla"),
+        primitive={"windowSize": "blabla", "stride": "blabla"},
+        errors={
+            "stride": ["Invalid stride format. Must be e.g. '1d', '2hour', '60second'"],
+            "windowSize": ["Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'"],
+        },
+    ),
+    InvalidTestCase(
+        name="schedule_data_spec_stride_too_low",
+        type=ScheduleDataSpec,
+        constructor=lambda: ScheduleDataSpec(window_size="3d", stride="1s"),
+        primitive={"windowSize": "3d", "stride": "1s"},
+        errors={"stride": ["Stride must be at least 60 seconds"]},
     ),
     InvalidTestCase(
         name="data_spec_nested_errors",
