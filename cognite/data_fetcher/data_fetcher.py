@@ -106,7 +106,7 @@ class TimeSeriesFetcher:
         data_frames = {alias: df for alias, df in zip(aliases, res)}
         return data_frames
 
-    def fetch_datapoints(self, alias: Union[str, List[str]]):
+    def fetch_datapoints(self, alias: Union[str, List[str]]) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         if type(alias) == str:
             return self._fetch_datapoints_single(alias)
         elif type(alias) == list:
