@@ -6,7 +6,7 @@ from cognite.data_fetcher.exceptions import SpecValidationError
 
 
 @pytest.mark.parametrize("data_spec", [DataSpec(), {}, "{}"])
-def test_empty_data_spec(data_spec):
+def test_empty_data_spec(http_mock, data_spec):
     data_fetcher = DataFetcher(data_spec)
     assert data_fetcher.get_data_spec() == DataSpec()
 
@@ -16,7 +16,7 @@ def test_invalid_spec_type():
         DataFetcher(123)
 
 
-def test_get_data_spec():
+def test_get_data_spec(http_mock):
     data_spec = DataSpec(files={"f1": FileSpec(id=123)})
     getted_data_spec = DataFetcher(data_spec).get_data_spec()
     getted_data_spec.files["f1"].id = 234
@@ -24,7 +24,7 @@ def test_get_data_spec():
 
 
 class TestFiles:
-    def test_get_aliases(self):
+    def test_get_aliases(self, http_mock):
         data_spec = DataSpec(files={"f1": FileSpec(id=123), "f2": FileSpec(id=234)})
         data_fetcher = DataFetcher(data_spec)
         aliases = data_fetcher.files.aliases
@@ -33,7 +33,7 @@ class TestFiles:
 
 
 class TestTimeSeries:
-    def test_get_aliases(self):
+    def test_get_aliases(self, http_mock):
         data_spec = DataSpec(
             time_series={"ts1": TimeSeriesSpec(id=123, start=4, end=5), "ts2": TimeSeriesSpec(id=234, start=4, end=5)}
         )

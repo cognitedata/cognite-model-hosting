@@ -69,13 +69,9 @@ invalid_test_cases = [
     InvalidTestCase(
         name="time_series_missing_fields",
         type=TimeSeriesSpec,
-        constructor=lambda: TimeSeriesSpec(id=None, start=None, end=None),
-        primitive={},
-        errors={
-            "id": ["Missing data for required field."],
-            "start": ["Missing data for required field."],
-            "end": ["Missing data for required field."],
-        },
+        constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
+        primitive={"start": 1, "end": 2},
+        errors={"id": ["Missing data for required field."]},
     ),
     InvalidTestCase(
         name="time_series_aggregates_but_not_granularity",
@@ -181,6 +177,12 @@ def test_invalid(name, type, constructor, primitive, errors):
         actual_errors = remove_defaultdict_in_errors(excinfo.value.errors)
         if actual_errors != errors:
             pytest.fail("\nMethod: {}\nErrors:\n{}\nExpected:\n{}\n".format(name, actual_errors, errors))
+
+
+@pytest.mark.parametrize("start, end, exception", [(None, 1, TypeError), (1, [], TypeError), ("bla", 1, ValueError)])
+def test_time_series_spec_invalid_start_end(start, end, exception):
+    with pytest.raises(exception):
+        TimeSeriesSpec(0, start, end)
 
 
 @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
