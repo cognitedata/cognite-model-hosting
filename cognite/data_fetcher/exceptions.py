@@ -27,3 +27,15 @@ class SpecValidationError(Exception):
 
     def __str__(self):
         return json.dumps(self.errors, indent=4, sort_keys=True)
+
+
+class InvalidFetchRequest(Exception):
+    pass
+
+
+class InvalidAlias(Exception):
+    def __init__(self, alias):
+        self.alias = alias
+
+    def __str__(self):
+        return "Alias '{}' does not exist".format(self.alias)

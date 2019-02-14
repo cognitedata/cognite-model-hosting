@@ -1,8 +1,11 @@
+import asyncio
 from typing import Dict, List, Union
+
+import pandas as pd
 
 from cognite.data_fetcher._client.cdp_client import CdpClient
 from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
-from cognite.data_fetcher.exceptions import SpecValidationError
+from cognite.data_fetcher.exceptions import InvalidAlias, InvalidFetchRequest, SpecValidationError
 
 
 class FilesFetcher:
@@ -17,12 +20,101 @@ class FilesFetcher:
 
 class TimeSeriesFetcher:
     def __init__(self, time_series_specs: Dict[str, TimeSeriesSpec], cdp_client: CdpClient):
-        self._time_series_specs = time_series_specs
+        self._specs = time_series_specs
         self._cdp_client = cdp_client
 
     @property
     def aliases(self) -> List:
-        return list(self._time_series_specs.keys())
+        return list(self._specs.keys())
+
+    def get_spec(self, alias: str) -> TimeSeriesSpec:
+        self._check_valid_alias(alias)
+        return self._specs[alias].copy()
+
+    def _check_valid_alias(self, alias: str):
+        if type(alias) != str:
+            raise TypeError("Alias `{}` ({}) was not a string".format(alias, type(alias)))
+        if alias not in self._specs:
+            raise InvalidAlias("No alias `{}` in the spec".format(alias))
+
+    def _check_valid_aliases(self, aliases: List[str]):
+        for alias in aliases:
+            self._check_valid_alias(alias)
+
+    def _check_only_aggregates(self, aliases: List[str]):
+        for alias in aliases:
+            if self._specs[alias].aggregate is None:
+                raise InvalidFetchRequest("All time series of a data frame needs to be aggregates")
+
+    def _get_common_start_end_granularity(self, aliases):
+        starts = set()
+        ends = set()
+        granularities = set()
+        for alias in aliases:
+            starts.add(self._specs[alias].start)
+            ends.add(self._specs[alias].end)
+            granularities.add(self._specs[alias].granularity)
+
+        if len(starts) != 1 or len(ends) != 1:
+            raise InvalidFetchRequest(
+                "The time series are not aligned. They need to have same start and end to be part of the same data frame"
+            )
+
+        if len(granularities) != 1:
+            raise InvalidFetchRequest(
+                "Granularity mismatch. All time series must have same granularity to be part of the same data frame"
+            )
+
+        return starts.pop(), ends.pop(), granularities.pop()
+
+    def fetch_dataframe(self, aliases: List[str]) -> pd.DataFrame:
+        if type(aliases) != list:
+            raise TypeError("Invalid argument type. Aliases should be a list of string")
+        self._check_valid_aliases(aliases)
+        self._check_only_aggregates(aliases)
+        time_series = []
+        for alias in aliases:
+            spec = self._specs[alias]
+            time_series.append({"id": spec.id, "aggregate": spec.aggregate})
+        start, end, granularity = self._get_common_start_end_granularity(aliases)
+        return asyncio.get_event_loop().run_until_complete(
+            self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
+        )
+
+    def _fetch_datapoints_single(self, alias):
+        self._check_valid_alias(alias)
+
+        spec = self._specs[alias]
+        return asyncio.get_event_loop().run_until_complete(
+            self._cdp_client.get_datapoints_frame_single(
+                spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
+            )
+        )
+
+    def _fetch_datapoints_multiple(self, aliases):
+        self._check_valid_aliases(aliases)
+
+        futures = []
+        for alias in aliases:
+            spec = self._specs[alias]
+            futures.append(
+                self._cdp_client.get_datapoints_frame_single(
+                    spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
+                )
+            )
+        res = asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+        data_frames = {alias: df for alias, df in zip(aliases, res)}
+        return data_frames
+
+    def fetch_datapoints(self, alias: Union[str, List[str]]) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+        if type(alias) == str:
+            return self._fetch_datapoints_single(alias)
+        elif type(alias) == list:
+            return self._fetch_datapoints_multiple(alias)
+        else:
+            raise TypeError(
+                "Invalid argument type. Specify either a single alias (string) or a list of aliases (list of strings)"
+            )
 
 
 class DataFetcher:
