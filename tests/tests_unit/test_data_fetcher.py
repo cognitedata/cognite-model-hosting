@@ -51,6 +51,12 @@ class TestFileFetcher:
         with pytest.raises(InvalidAlias):
             data_fetcher.files.get_spec("does-not-exist")
 
+    def test_get_spec_does_not_mutate_fetcher_state(self, data_fetcher):
+        mutated_spec = data_fetcher.files.get_spec("f1")
+        mutated_spec.id = 1000
+        spec = data_fetcher.files.get_spec("f1")
+        assert spec.id != 1000
+
     @pytest.fixture
     def mock_file_download(self, http_mock):
         mock_download_url = "http://download.url"

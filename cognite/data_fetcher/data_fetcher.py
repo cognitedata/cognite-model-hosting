@@ -21,7 +21,7 @@ class FileFetcher:
             raise InvalidAlias(alias)
         return self._file_specs[alias].copy()
 
-    def fetch(self, alias: Union[str, List[str]], directory: str = None):
+    def fetch(self, alias: Union[str, List[str]], directory: str = None) -> None:
         directory = directory or os.getcwd()
         if not os.path.isdir(directory):
             raise DirectoryDoesNotExist(directory)
