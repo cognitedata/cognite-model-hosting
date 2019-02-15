@@ -8,8 +8,13 @@ from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.data_fetcher.exceptions import InvalidAlias, InvalidFetchRequest, SpecValidationError
 
 
+@pytest.fixture(autouse=True)
+def avoid_login_status(http_mock):
+    pass
+
+
 @pytest.mark.parametrize("data_spec", [DataSpec(), {}, "{}"])
-def test_empty_data_spec(data_spec):
+def test_empty_data_spec(http_mock, data_spec):
     data_fetcher = DataFetcher(data_spec)
     assert data_fetcher.get_data_spec() == DataSpec()
 
