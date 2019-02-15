@@ -74,6 +74,24 @@ invalid_test_cases = [
         errors={"id": ["Missing data for required field."]},
     ),
     InvalidTestCase(
+        name="time_series_missing_id",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
+        primitive={"start": 1, "end": 2},
+        errors={"id": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="time_series_missing_fields",
+        type=TimeSeriesSpec,
+        constructor=None,
+        primitive={},
+        errors={
+            "id": ["Missing data for required field."],
+            "start": ["Missing data for required field."],
+            "end": ["Missing data for required field."],
+        },
+    ),
+    InvalidTestCase(
         name="time_series_aggregates_but_not_granularity",
         type=TimeSeriesSpec,
         constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg"),
@@ -133,13 +151,6 @@ invalid_test_cases = [
             "stride": ["Invalid stride format. Must be e.g. '1d', '2hour', '60second'"],
             "windowSize": ["Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'"],
         },
-    ),
-    InvalidTestCase(
-        name="schedule_data_spec_stride_too_low",
-        type=ScheduleDataSpec,
-        constructor=lambda: ScheduleDataSpec(window_size="3d", stride="1s"),
-        primitive={"windowSize": "3d", "stride": "1s"},
-        errors={"stride": ["Stride must be at least 60 seconds"]},
     ),
     InvalidTestCase(
         name="data_spec_nested_errors",

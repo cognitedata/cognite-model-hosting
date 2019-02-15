@@ -109,7 +109,12 @@ class ScheduleDataSpec(_BaseSpec):
         for start, end in intervals:
             time_series_specs = {
                 alias: TimeSeriesSpec(
-                    id=spec.id, start=start, end=end, aggregate=spec.aggregate, granularity=spec.granularity
+                    id=spec.id,
+                    start=start,
+                    end=end,
+                    aggregate=spec.aggregate,
+                    granularity=spec.granularity,
+                    include_outside_points=spec.include_outside_points,
                 )
                 for alias, spec in self.time_series.items()
             }
@@ -201,8 +206,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
     @validates("stride")
     def validate_stride(self, stride):
         try:
-            if granularity_to_ms(stride) < 60000:
-                raise ValidationError("Stride must be at least 60 seconds")
+            granularity_to_ms(stride)
         except ValueError as e:
             raise ValidationError("Invalid stride format. Must be e.g. '1d', '2hour', '60second'") from e
 
