@@ -1,8 +1,10 @@
 import json
-from typing import Dict
+from datetime import datetime
+from typing import Dict, Union
 
-from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates_schema
+from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates, validates_schema
 
+from cognite.data_fetcher._utils import calculate_window_intervals, granularity_to_ms, interval_to_ms
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -43,9 +45,6 @@ class _BaseSpec:
     def __str__(self):
         return self.to_json()
 
-    def __repr__(self):
-        return self.__str__()
-
     def __eq__(self, other):
         if type(self) == type(other):
             return self.__dict__ == other.__dict__
@@ -57,15 +56,14 @@ class TimeSeriesSpec(_BaseSpec):
     def __init__(
         self,
         id: int,
-        start: int,
-        end: int,
+        start: Union[int, str, datetime],
+        end: Union[int, str, datetime, None],
         aggregate: str = None,
         granularity: str = None,
         include_outside_points: bool = None,
     ):
         self.id = id
-        self.start = start
-        self.end = end
+        self.start, self.end = interval_to_ms(start, end)
         self.aggregate = aggregate
         self.granularity = granularity
         self.include_outside_points = include_outside_points
@@ -99,6 +97,29 @@ class ScheduleDataSpec(_BaseSpec):
         self.time_series = time_series or {}
 
         self.validate()
+
+    def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+        start, end = interval_to_ms(start, end)
+
+        intervals = calculate_window_intervals(
+            start=start, end=end, stride=granularity_to_ms(self.stride), window_size=granularity_to_ms(self.window_size)
+        )
+
+        data_specs = []
+        for start, end in intervals:
+            time_series_specs = {
+                alias: TimeSeriesSpec(
+                    id=spec.id,
+                    start=start,
+                    end=end,
+                    aggregate=spec.aggregate,
+                    granularity=spec.granularity,
+                    include_outside_points=spec.include_outside_points,
+                )
+                for alias, spec in self.time_series.items()
+            }
+            data_specs.append(DataSpec(time_series=time_series_specs))
+        return data_specs
 
 
 class _BaseSchema(Schema):
@@ -150,6 +171,13 @@ class _TimeSeriesSpecSchema(_BaseSchema):
         if errors:
             raise ValidationError(errors)
 
+    @validates("granularity")
+    def validate_granularity(self, granularity):
+        try:
+            granularity_to_ms(granularity)
+        except ValueError as e:
+            raise ValidationError("Invalid granularity format. Must be e.g. '1d', '2hour', '60second'") from e
+
 
 class _FileSpecSchema(_BaseSchema):
     _default_spec = FileSpec
@@ -174,6 +202,20 @@ class _ScheduleDataSpecSchema(_BaseSchema):
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
+
+    @validates("stride")
+    def validate_stride(self, stride):
+        try:
+            granularity_to_ms(stride)
+        except ValueError as e:
+            raise ValidationError("Invalid stride format. Must be e.g. '1d', '2hour', '60second'") from e
+
+    @validates("windowSize")
+    def validate_window_size(self, window_size):
+        try:
+            granularity_to_ms(window_size)
+        except ValueError as e:
+            raise ValidationError("Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'") from e
 
 
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()

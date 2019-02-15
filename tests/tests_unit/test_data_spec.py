@@ -69,7 +69,21 @@ invalid_test_cases = [
     InvalidTestCase(
         name="time_series_missing_fields",
         type=TimeSeriesSpec,
-        constructor=lambda: TimeSeriesSpec(id=None, start=None, end=None),
+        constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
+        primitive={"start": 1, "end": 2},
+        errors={"id": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="time_series_missing_id",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
+        primitive={"start": 1, "end": 2},
+        errors={"id": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="time_series_missing_fields",
+        type=TimeSeriesSpec,
+        constructor=None,
         primitive={},
         errors={
             "id": ["Missing data for required field."],
@@ -108,6 +122,13 @@ invalid_test_cases = [
         errors={"granularity": ["granularity can only be specified for aggregates."]},
     ),
     InvalidTestCase(
+        name="time_series_invalid_granularity",
+        type=TimeSeriesSpec,
+        constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, granularity="bla"),
+        primitive={"id": 6, "start": 123, "end": 234, "granularity": "bla"},
+        errors={"granularity": ["Invalid granularity format. Must be e.g. '1d', '2hour', '60second'"]},
+    ),
+    InvalidTestCase(
         name="schedule_time_series_with_start_end",
         type=ScheduleTimeSeriesSpec,
         constructor=None,
@@ -120,6 +141,16 @@ invalid_test_cases = [
         constructor=lambda: ScheduleDataSpec(window_size=None, stride=None),
         primitive={},
         errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
+    ),
+    InvalidTestCase(
+        name="schedule_data_spec_invalid_stride_window_size",
+        type=ScheduleDataSpec,
+        constructor=lambda: ScheduleDataSpec(window_size="blabla", stride="blabla"),
+        primitive={"windowSize": "blabla", "stride": "blabla"},
+        errors={
+            "stride": ["Invalid stride format. Must be e.g. '1d', '2hour', '60second'"],
+            "windowSize": ["Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'"],
+        },
     ),
     InvalidTestCase(
         name="data_spec_nested_errors",
@@ -181,6 +212,12 @@ def test_invalid(name, type, constructor, primitive, errors):
         actual_errors = remove_defaultdict_in_errors(excinfo.value.errors)
         if actual_errors != errors:
             pytest.fail("\nMethod: {}\nErrors:\n{}\nExpected:\n{}\n".format(name, actual_errors, errors))
+
+
+@pytest.mark.parametrize("start, end, exception", [(None, 1, TypeError), (1, [], TypeError), ("bla", 1, ValueError)])
+def test_time_series_spec_invalid_start_end(start, end, exception):
+    with pytest.raises(exception):
+        TimeSeriesSpec(0, start, end)
 
 
 @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)

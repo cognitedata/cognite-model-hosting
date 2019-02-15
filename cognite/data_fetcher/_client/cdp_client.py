@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import pandas as pd
 
-from cognite.data_fetcher._client import utils
+import cognite.data_fetcher._utils as utils
 from cognite.data_fetcher._client.api_client import ApiClient
 
 DATAPOINTS_LIMIT = 100000
@@ -15,13 +15,12 @@ class CdpClient(ApiClient):
     async def get_datapoints_frame_single(
         self,
         id: int,
-        start: Union[str, int],
-        end: Union[str, int, None] = None,
+        start: int,
+        end: int,
         aggregate: str = None,
         granularity: str = None,
         include_outside_points: bool = False,
     ) -> pd.DataFrame:
-        start, end = utils.interval_to_ms(start, end)
         limit = DATAPOINTS_LIMIT_AGGREGATES if aggregate else DATAPOINTS_LIMIT
         params = {
             "aggregates": aggregate,
@@ -50,13 +49,8 @@ class CdpClient(ApiClient):
         return df
 
     async def get_datapoints_frame(
-        self,
-        time_series: List[Dict[str, Union[int, str]]],
-        granularity: str,
-        start: Union[str, int],
-        end: Union[str, int, None] = None,
+        self, time_series: List[Dict[str, Union[int, str]]], granularity: str, start: int, end: int
     ) -> pd.DataFrame:
-        start, end = utils.interval_to_ms(start, end)
         limit = DATAPOINTS_LIMIT // len(time_series)
 
         ts_ids = [ts["id"] for ts in time_series]
