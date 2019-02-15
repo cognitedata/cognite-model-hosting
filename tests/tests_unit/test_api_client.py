@@ -1,4 +1,10 @@
 import os
+import random
+import sys
+import threading
+import types
+from multiprocessing.pool import ThreadPool
+from time import sleep
 
 import pytest
 from aioresponses import aioresponses
@@ -66,6 +72,36 @@ def test_create_client_param_config(http_mock):
     assert "test" == client._base_url
     assert "test" == client._project
     assert 0 == client._num_of_retries
+
+
+@pytest.fixture
+def thread_local_credentials_module():
+    credentials_module = types.ModuleType("cognite._thread_local")
+    credentials_module.credentials = threading.local()
+    sys.modules["cognite._thread_local"] = credentials_module
+    yield
+    del sys.modules["cognite._thread_local"]
+
+
+def create_client_and_check_config(i):
+    from cognite._thread_local import credentials
+
+    api_key = "thread-local-api-key{}".format(i)
+    project = "thread-local-project{}".format(i)
+
+    credentials.api_key = api_key
+    credentials.project = project
+
+    sleep(random.random())
+    client = ApiClient()
+
+    assert api_key == client._api_key
+    assert project == client._project
+
+
+def test_create_client_thread_local_config(thread_local_credentials_module):
+    with ThreadPool() as pool:
+        pool.map(create_client_and_check_config, list(range(16)))
 
 
 @pytest.fixture
