@@ -6,7 +6,12 @@ import pandas as pd
 
 from cognite.data_fetcher._client.cdp_client import CdpClient
 from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
-from cognite.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest, SpecValidationError
+from cognite.data_fetcher.exceptions import (
+    DirectoryDoesNotExist,
+    InvalidAlias,
+    InvalidFetchRequest,
+    SpecValidationError,
+)
 
 
 class FileFetcher:

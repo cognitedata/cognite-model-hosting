@@ -36,7 +36,7 @@ class DirectoryDoesNotExist(Exception):
     def __str__(self):
         return "'{}' is not a directory".format(self.directory)
 
-      
+
 class InvalidFetchRequest(Exception):
     pass
 
