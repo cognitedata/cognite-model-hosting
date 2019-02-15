@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 from typing import Any, Dict, Union
 
 import aiohttp
@@ -19,13 +20,21 @@ CLIENT_SESSION = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
 class ApiClient:
     def __init__(self, api_key: str = None, project: str = None, base_url: str = None, num_of_retries: int = None):
+        thread_local_api_key = None
+        thread_local_project = None
+        if "cognite._thread_local" in sys.modules:
+            from cognite._thread_local import credentials
+
+            thread_local_api_key = getattr(credentials, "api_key", None)
+            thread_local_project = getattr(credentials, "project", None)
+
         environment_api_key = os.getenv("COGNITE_API_KEY")
         environment_project = os.getenv("COGNITE_PROJECT")
         environment_base_url = os.getenv("COGNITE_BASE_URL")
         environment_num_of_retries = os.getenv("COGNITE_NUM_RETRIES")
 
         self._client_session = CLIENT_SESSION
-        self._api_key = api_key or environment_api_key
+        self._api_key = api_key or thread_local_api_key or environment_api_key
         self._base_url = base_url or environment_base_url or DEFAULT_BASE_URL
         self._num_of_retries = utils.choose_num_of_retries(
             num_of_retries, environment_num_of_retries, DEFAULT_NUM_OF_RETRIES
@@ -36,7 +45,7 @@ class ApiClient:
             "accept": "application/json",
             "User-agent": "cognite-data-fetcher/{}".format(cognite.data_fetcher.__version__),
         }
-        self._project = project or environment_project or self._get_project(self._api_key)
+        self._project = project or thread_local_project or environment_project or self._get_project(self._api_key)
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)
         self._base_url_v0_6 = self._base_url + "/api/0.6/projects/{}".format(self._project)
 
