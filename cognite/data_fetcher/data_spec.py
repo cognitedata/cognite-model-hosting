@@ -4,7 +4,7 @@ from typing import Dict, Union
 
 from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates, validates_schema
 
-from cognite.data_fetcher._utils import calculate_window_intervals, granularity_to_ms, interval_to_ms
+from cognite.data_fetcher._utils import calculate_window_intervals, granularity_to_ms, to_ms
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -57,13 +57,14 @@ class TimeSeriesSpec(_BaseSpec):
         self,
         id: int,
         start: Union[int, str, datetime],
-        end: Union[int, str, datetime, None],
+        end: Union[int, str, datetime],
         aggregate: str = None,
         granularity: str = None,
         include_outside_points: bool = None,
     ):
         self.id = id
-        self.start, self.end = interval_to_ms(start, end)
+        self.start = to_ms(start)
+        self.end = to_ms(end)
         self.aggregate = aggregate
         self.granularity = granularity
         self.include_outside_points = include_outside_points
@@ -99,7 +100,7 @@ class ScheduleDataSpec(_BaseSpec):
         self.validate()
 
     def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
-        start, end = interval_to_ms(start, end)
+        start, end = to_ms(start), to_ms(end)
 
         intervals = calculate_window_intervals(
             start=start, end=end, stride=granularity_to_ms(self.stride), window_size=granularity_to_ms(self.window_size)

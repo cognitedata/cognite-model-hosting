@@ -29,34 +29,21 @@ def _time_ago_to_ms(time_ago_string: str) -> int:
     raise ValueError("Invalid time-ago format. Must be e.g. '3d-ago' or '1w-ago'.")
 
 
-def datetime_to_ms(dt):
+def _datetime_to_ms(dt):
     return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
 
 
-def interval_to_ms(start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
-    """Returns the ms representation of start-end-interval whether it is time-ago, datetime or None."""
+def to_ms(t: Union[int, str, datetime]):
+    """Returns the ms representation of some timestamp given by milliseconds, time-ago format or datetime object"""
     time_now = int(round(time.time() * 1000))
-    if isinstance(start, datetime):
-        start = datetime_to_ms(start)
-    elif isinstance(start, str):
-        start = time_now - _time_ago_to_ms(start)
-    elif isinstance(start, int):
-        pass
+    if isinstance(t, int):
+        return t
+    elif isinstance(t, str):
+        return time_now - _time_ago_to_ms(t)
+    elif isinstance(t, datetime):
+        return _datetime_to_ms(t)
     else:
-        raise TypeError("start must be str, int, or datetime")
-
-    if isinstance(end, datetime):
-        end = datetime_to_ms(end)
-    elif isinstance(end, str):
-        end = time_now - _time_ago_to_ms(end)
-    elif end is None:
-        end = time_now
-    elif isinstance(end, int):
-        pass
-    else:
-        raise TypeError("end must be str, int or None")
-
-    return start, end
+        raise TypeError("Timestamp {} was of type {}, but must be str, int or datetime,".format(t, type(t)))
 
 
 def granularity_to_ms(granularity):

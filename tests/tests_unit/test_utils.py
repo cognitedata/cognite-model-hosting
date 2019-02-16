@@ -1,31 +1,55 @@
 from datetime import datetime
+from time import sleep
+from unittest import mock
 
-from cognite.data_fetcher._utils import interval_to_ms
-from tests.utils import get_time_w_offset, round_to_nearest
+import pytest
 
-
-def test_interval_to_ms_with_ms():
-    assert (1514764800000, 1546300800000) == interval_to_ms(1514764800000, 1546300800000)
-
-
-def test_interval_to_ms_with_datetime():
-    assert (1514764800000, 1546300800000) == interval_to_ms(datetime(2018, 1, 1), datetime(2019, 1, 1))
+from cognite.data_fetcher._utils import to_ms
 
 
-def test_interval_to_ms_with_time_ago():
-    time_now = round_to_nearest(get_time_w_offset(), 1000)
-    one_day_ago = round_to_nearest(get_time_w_offset(days=1), 1000)
+class TestToMs:
+    @pytest.mark.parametrize("t", [None, 1.23, [], {}])
+    def test_invalid_type(self, t):
+        with pytest.raises(TypeError, match="must be"):
+            to_ms(t)
 
-    one_day_ago_ms, time_now_ms = interval_to_ms("1d-ago", "now")
-    one_day_ago_ms = round_to_nearest(one_day_ago_ms, 1000)
-    time_now_ms = round_to_nearest(time_now_ms, 1000)
+    def test_ms(self):
+        assert 1514760000000 == to_ms(1514760000000)
+        assert 1514764800000 == to_ms(1514764800000)
 
-    assert time_now == time_now_ms
-    assert one_day_ago == one_day_ago_ms
+    def test_datetime(self):
+        assert 1514764800000 == to_ms(datetime(2018, 1, 1))
+        assert 1546300800000 == to_ms(datetime(2019, 1, 1))
 
+    @mock.patch("cognite.data_fetcher._utils.time.time")
+    @pytest.mark.parametrize(
+        "time_ago_string, expected_timestamp",
+        [
+            ("now", 10 ** 9),
+            ("1s-ago", 10 ** 9 - 1 * 1000),
+            ("13s-ago", 10 ** 9 - 13 * 1000),
+            ("1m-ago", 10 ** 9 - 1 * 60 * 1000),
+            ("13m-ago", 10 ** 9 - 13 * 60 * 1000),
+            ("1h-ago", 10 ** 9 - 1 * 60 * 60 * 1000),
+            ("13h-ago", 10 ** 9 - 13 * 60 * 60 * 1000),
+            ("1d-ago", 10 ** 9 - 1 * 24 * 60 * 60 * 1000),
+            ("13d-ago", 10 ** 9 - 13 * 24 * 60 * 60 * 1000),
+            ("1w-ago", 10 ** 9 - 1 * 7 * 24 * 60 * 60 * 1000),
+            ("13w-ago", 10 ** 9 - 13 * 7 * 24 * 60 * 60 * 1000),
+        ],
+    )
+    def test_time_ago(self, time_mock, time_ago_string, expected_timestamp):
+        time_mock.return_value = 1000000
 
-def test_interval_to_ms_with_end_none():
-    time_now = round_to_nearest(get_time_w_offset(), 1000)
-    _, time_now_ms = interval_to_ms(0, None)
-    time_now_ms = round_to_nearest(time_now_ms, 1000)
-    assert time_now == time_now_ms
+        assert to_ms(time_ago_string) == expected_timestamp
+
+    def test_time_ago_real_time(self):
+        expected_time_now = datetime.now().timestamp() * 1000
+        time_now = to_ms("now")
+        print(expected_time_now, time_now)
+        assert abs(expected_time_now - time_now) < 10
+
+        sleep(0.1)
+
+        time_now = to_ms("now")
+        assert abs(expected_time_now - time_now) > 90
