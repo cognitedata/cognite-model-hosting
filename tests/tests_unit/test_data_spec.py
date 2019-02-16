@@ -1,6 +1,6 @@
 import json
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -53,18 +53,18 @@ class TestSpecValidation:
         ),
         TestCase(
             "minimal_schedule_data_spec",
-            ScheduleDataSpec(stride="1m", window_size="5m", start=123),
-            {"stride": "1m", "windowSize": "5m", "start": 123},
+            ScheduleDataSpec(stride=60000, window_size=120000, start=123),
+            {"stride": 60000, "windowSize": 120000, "start": 123},
         ),
         TestCase(
             "full_schedule_data_spec",
             ScheduleDataSpec(
-                stride="1m",
-                window_size="5m",
+                stride=60000,
+                window_size=120000,
                 start=123,
                 time_series={"ts1": ScheduleTimeSeriesSpec(id=6), "ts2": ScheduleTimeSeriesSpec(id=7)},
             ),
-            {"stride": "1m", "windowSize": "5m", "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
+            {"stride": 60000, "windowSize": 120000, "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
         ),
     ]
 
@@ -129,7 +129,11 @@ class TestSpecValidation:
             type=TimeSeriesSpec,
             constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, granularity="bla"),
             primitive={"id": 6, "start": 123, "end": 234, "granularity": "bla"},
-            errors={"granularity": ["Invalid granularity format. Must be e.g. '1d', '2hour', '60second'"]},
+            errors={
+                "granularity": [
+                    "Invalid granularity format: `bla`. Must be on format <integer>(s|m|h|d). E.g. '5m', '3h' or '1d'."
+                ]
+            },
         ),
         InvalidTestCase(
             name="schedule_time_series_with_start_end",
@@ -141,19 +145,16 @@ class TestSpecValidation:
         InvalidTestCase(
             name="schedule_data_spec_missing_fields",
             type=ScheduleDataSpec,
-            constructor=lambda: ScheduleDataSpec(window_size=None, stride=None, start=123),
+            constructor=None,
             primitive={"start": 123},
             errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
         ),
         InvalidTestCase(
             name="schedule_data_spec_invalid_stride_window_size",
             type=ScheduleDataSpec,
-            constructor=lambda: ScheduleDataSpec(window_size="blabla", stride="blabla", start=123),
-            primitive={"windowSize": "blabla", "stride": "blabla", "start": 123},
-            errors={
-                "stride": ["Invalid stride format. Must be e.g. '1d', '2hour', '60second'"],
-                "windowSize": ["Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'"],
-            },
+            constructor=lambda: ScheduleDataSpec(window_size=0, stride=-1, start=123),
+            primitive={"windowSize": 0, "stride": -1, "start": 123},
+            errors={"stride": ["Must be at least 1."], "windowSize": ["Must be at least 1."]},
         ),
         InvalidTestCase(
             name="data_spec_nested_errors",
@@ -256,14 +257,21 @@ class TestSpecConstructor:
             primitive={"id": 123, "start": 1514764800000, "end": 1514851200000},
         ),
         TestCase(
-            name="schedule_data_spec_start_time_ago",
-            constructor=lambda: ScheduleDataSpec(stride="1h", window_size="5h", start="2m-ago"),
-            primitive={"stride": "1h", "windowSize": "5h", "start": 10 ** 9 - 2 * 60 * 1000},
+            name="schedule_data_spec_default_start_now",
+            constructor=lambda: ScheduleDataSpec(stride=123, window_size=234),
+            primitive={"stride": 123, "windowSize": 234, "start": 10 ** 9},
         ),
         TestCase(
-            name="schedule_data_spec_start_datetime",
-            constructor=lambda: ScheduleDataSpec(stride="1h", window_size="5h", start=datetime(2018, 1, 1)),
-            primitive={"stride": "1h", "windowSize": "5h", "start": 1514764800000},
+            name="schedule_data_spec_string_formats",
+            constructor=lambda: ScheduleDataSpec(stride="1m", window_size="2m", start="2m-ago"),
+            primitive={"stride": 60000, "windowSize": 120000, "start": 10 ** 9 - 2 * 60 * 1000},
+        ),
+        TestCase(
+            name="schedule_data_spec_datetime",
+            constructor=lambda: ScheduleDataSpec(
+                stride=timedelta(minutes=1), window_size=timedelta(minutes=2), start=datetime(2018, 1, 1)
+            ),
+            primitive={"stride": 60000, "windowSize": 120000, "start": 1514764800000},
         ),
     ]
 

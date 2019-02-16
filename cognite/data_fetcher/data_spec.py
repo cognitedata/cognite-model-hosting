@@ -1,10 +1,20 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Union
 
-from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates, validates_schema
+from marshmallow import (
+    RAISE,
+    Schema,
+    ValidationError,
+    fields,
+    post_dump,
+    post_load,
+    validate,
+    validates,
+    validates_schema,
+)
 
-from cognite.data_fetcher._utils import calculate_windows, granularity_to_ms, to_ms
+from cognite.data_fetcher._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -63,8 +73,8 @@ class TimeSeriesSpec(_BaseSpec):
         include_outside_points: bool = None,
     ):
         self.id = id
-        self.start = to_ms(start)
-        self.end = to_ms(end)
+        self.start = timestamp_to_ms(start)
+        self.end = timestamp_to_ms(end)
         self.aggregate = aggregate
         self.granularity = granularity
         self.include_outside_points = include_outside_points
@@ -94,27 +104,23 @@ class DataSpec(_BaseSpec):
 class ScheduleDataSpec(_BaseSpec):
     def __init__(
         self,
-        stride: str,
-        window_size: str,
-        start: Union[int, datetime, str] = "now",
+        stride: Union[int, str, timedelta],
+        window_size: Union[int, str, timedelta],
+        start: Union[int, str, datetime] = "now",
         time_series: Dict[str, ScheduleTimeSeriesSpec] = None,
     ):
-        self.stride = stride
-        self.window_size = window_size
-        self.start = to_ms(start)
+        self.stride = time_interval_to_ms(stride)
+        self.window_size = time_interval_to_ms(window_size)
+        self.start = timestamp_to_ms(start)
         self.time_series = time_series or {}
 
         self.validate()
 
     def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
-        start, end = to_ms(start), to_ms(end)
+        start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
-            start=start,
-            end=end,
-            stride=granularity_to_ms(self.stride),
-            window_size=granularity_to_ms(self.window_size),
-            first=self.start,
+            start=start, end=end, stride=self.stride, window_size=self.window_size, first=self.start
         )
 
         data_specs = []
@@ -188,7 +194,7 @@ class _TimeSeriesSpecSchema(_BaseSchema):
         try:
             granularity_to_ms(granularity)
         except ValueError as e:
-            raise ValidationError("Invalid granularity format. Must be e.g. '1d', '2hour', '60second'") from e
+            raise ValidationError(str(e)) from e
 
 
 class _FileSpecSchema(_BaseSchema):
@@ -207,28 +213,14 @@ class _DataSpecSchema(_BaseSchema):
 class _ScheduleDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleDataSpec
 
-    stride = fields.Str(required=True)
-    windowSize = fields.Str(required=True, attribute="window_size")
+    stride = fields.Int(required=True, validate=validate.Range(min=1))
+    windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
     start = fields.Int(required=True)
     timeSeries = fields.Dict(
         keys=fields.Str(),
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
-
-    @validates("stride")
-    def validate_stride(self, stride):
-        try:
-            granularity_to_ms(stride)
-        except ValueError as e:
-            raise ValidationError("Invalid stride format. Must be e.g. '1d', '2hour', '60second'") from e
-
-    @validates("windowSize")
-    def validate_window_size(self, window_size):
-        try:
-            granularity_to_ms(window_size)
-        except ValueError as e:
-            raise ValidationError("Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'") from e
 
 
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
