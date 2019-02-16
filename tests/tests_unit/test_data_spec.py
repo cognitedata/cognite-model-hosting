@@ -53,17 +53,18 @@ class TestSpecValidation:
         ),
         TestCase(
             "minimal_schedule_data_spec",
-            ScheduleDataSpec(stride="1m", window_size="5m"),
-            {"stride": "1m", "windowSize": "5m"},
+            ScheduleDataSpec(stride="1m", window_size="5m", start=123),
+            {"stride": "1m", "windowSize": "5m", "start": 123},
         ),
         TestCase(
             "full_schedule_data_spec",
             ScheduleDataSpec(
                 stride="1m",
                 window_size="5m",
+                start=123,
                 time_series={"ts1": ScheduleTimeSeriesSpec(id=6), "ts2": ScheduleTimeSeriesSpec(id=7)},
             ),
-            {"stride": "1m", "windowSize": "5m", "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
+            {"stride": "1m", "windowSize": "5m", "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
         ),
     ]
 
@@ -140,15 +141,15 @@ class TestSpecValidation:
         InvalidTestCase(
             name="schedule_data_spec_missing_fields",
             type=ScheduleDataSpec,
-            constructor=lambda: ScheduleDataSpec(window_size=None, stride=None),
-            primitive={},
+            constructor=lambda: ScheduleDataSpec(window_size=None, stride=None, start=123),
+            primitive={"start": 123},
             errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
         ),
         InvalidTestCase(
             name="schedule_data_spec_invalid_stride_window_size",
             type=ScheduleDataSpec,
-            constructor=lambda: ScheduleDataSpec(window_size="blabla", stride="blabla"),
-            primitive={"windowSize": "blabla", "stride": "blabla"},
+            constructor=lambda: ScheduleDataSpec(window_size="blabla", stride="blabla", start=123),
+            primitive={"windowSize": "blabla", "stride": "blabla", "start": 123},
             errors={
                 "stride": ["Invalid stride format. Must be e.g. '1d', '2hour', '60second'"],
                 "windowSize": ["Invalid windowSize format. Must be e.g. '1d', '2hour', '60second'"],
@@ -254,6 +255,16 @@ class TestSpecConstructor:
             constructor=lambda: TimeSeriesSpec(id=123, start=datetime(2018, 1, 1), end=datetime(2018, 1, 2)),
             primitive={"id": 123, "start": 1514764800000, "end": 1514851200000},
         ),
+        TestCase(
+            name="schedule_data_spec_start_time_ago",
+            constructor=lambda: ScheduleDataSpec(stride="1h", window_size="5h", start="2m-ago"),
+            primitive={"stride": "1h", "windowSize": "5h", "start": 10 ** 9 - 2 * 60 * 1000},
+        ),
+        TestCase(
+            name="schedule_data_spec_start_datetime",
+            constructor=lambda: ScheduleDataSpec(stride="1h", window_size="5h", start=datetime(2018, 1, 1)),
+            primitive={"stride": "1h", "windowSize": "5h", "start": 1514764800000},
+        ),
     ]
 
     invalid_test_cases = [
@@ -264,32 +275,8 @@ class TestSpecConstructor:
             error_match="type",
         ),
         InvalidTestCase(
-            name="time_series_start_invalid_time_ago",
-            constructor=lambda: TimeSeriesSpec(id=123, start="bla", end=2),
-            exception=ValueError,
-            error_match="format",
-        ),
-        InvalidTestCase(
-            name="time_series_start_wrong_type",
-            constructor=lambda: TimeSeriesSpec(id=123, start=[], end=2),
-            exception=TypeError,
-            error_match="type",
-        ),
-        InvalidTestCase(
             name="time_series_start_none",
             constructor=lambda: TimeSeriesSpec(id=123, start=2, end=None),
-            exception=TypeError,
-            error_match="type",
-        ),
-        InvalidTestCase(
-            name="time_series_end_invalid_time_ago",
-            constructor=lambda: TimeSeriesSpec(id=123, start=2, end="bla"),
-            exception=ValueError,
-            error_match="format",
-        ),
-        InvalidTestCase(
-            name="time_series_end_wrong_type",
-            constructor=lambda: TimeSeriesSpec(id=123, start=2, end=[]),
             exception=TypeError,
             error_match="type",
         ),

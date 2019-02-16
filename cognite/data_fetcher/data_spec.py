@@ -4,7 +4,7 @@ from typing import Dict, Union
 
 from marshmallow import RAISE, Schema, ValidationError, fields, post_dump, post_load, validates, validates_schema
 
-from cognite.data_fetcher._utils import calculate_window_intervals, granularity_to_ms, to_ms
+from cognite.data_fetcher._utils import calculate_windows, granularity_to_ms, to_ms
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -92,9 +92,16 @@ class DataSpec(_BaseSpec):
 
 
 class ScheduleDataSpec(_BaseSpec):
-    def __init__(self, stride: str, window_size: str, time_series: Dict[str, ScheduleTimeSeriesSpec] = None):
+    def __init__(
+        self,
+        stride: str,
+        window_size: str,
+        start: Union[int, datetime, str] = "now",
+        time_series: Dict[str, ScheduleTimeSeriesSpec] = None,
+    ):
         self.stride = stride
         self.window_size = window_size
+        self.start = to_ms(start)
         self.time_series = time_series or {}
 
         self.validate()
@@ -102,12 +109,16 @@ class ScheduleDataSpec(_BaseSpec):
     def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
         start, end = to_ms(start), to_ms(end)
 
-        intervals = calculate_window_intervals(
-            start=start, end=end, stride=granularity_to_ms(self.stride), window_size=granularity_to_ms(self.window_size)
+        windows = calculate_windows(
+            start=start,
+            end=end,
+            stride=granularity_to_ms(self.stride),
+            window_size=granularity_to_ms(self.window_size),
+            first=self.start,
         )
 
         data_specs = []
-        for start, end in intervals:
+        for start, end in windows:
             time_series_specs = {
                 alias: TimeSeriesSpec(
                     id=spec.id,
@@ -198,6 +209,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
 
     stride = fields.Str(required=True)
     windowSize = fields.Str(required=True, attribute="window_size")
+    start = fields.Int(required=True)
     timeSeries = fields.Dict(
         keys=fields.Str(),
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))),

@@ -4,15 +4,15 @@ from datetime import datetime, timezone
 from typing import List, Tuple, Union
 
 
-def calculate_window_intervals(start: int, end: int, stride: int, window_size: int) -> List[Tuple[int, int]]:
-    next_end = start + stride
-    if end < next_end:
-        return []
-    intervals = []
-    while next_end <= end:
-        intervals.append((next_end - window_size, next_end))
-        next_end += stride
-    return intervals
+def calculate_windows(start: int, end: int, stride: int, window_size: int, first: int) -> List[Tuple[int, int]]:
+    next = max(start, first)
+    if (next - first) % stride != 0:
+        next += stride - ((start - first) % stride)
+    windows = []
+    while next < end:
+        windows.append((next - window_size, next))
+        next += stride
+    return windows
 
 
 def _time_ago_to_ms(time_ago_string: str) -> int:
