@@ -30,8 +30,6 @@ window_interval_test_cases = [
 
 @pytest.mark.parametrize("start, end, stride, window_size, first, expected_windows", window_interval_test_cases)
 def test_calculate_window_intervals(start, end, stride, window_size, first, expected_windows):
-    print(expected_windows)
-    print(calculate_windows(start, end, stride, window_size, first))
     assert expected_windows == calculate_windows(start, end, stride, window_size, first)
 
 
