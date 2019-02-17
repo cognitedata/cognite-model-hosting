@@ -66,6 +66,6 @@ def test_download_file(file_in_tenant):
     os.remove(target_path)
 
 
-def test_download_file_in_memory(file_in_tenant):
-    file_bytes = run_until_complete(CLIENT.download_file_in_memory(file_in_tenant["id"]))
+def test_download_file_to_memory(file_in_tenant):
+    file_bytes = run_until_complete(CLIENT.download_file_to_memory(file_in_tenant["id"]))
     assert isinstance(file_bytes, bytes)

@@ -29,6 +29,14 @@ class SpecValidationError(Exception):
         return json.dumps(self.errors, indent=4, sort_keys=True)
 
 
+class DirectoryDoesNotExist(Exception):
+    def __init__(self, directory):
+        self.directory = directory
+
+    def __str__(self):
+        return "'{}' is not a directory".format(self.directory)
+
+
 class InvalidFetchRequest(Exception):
     pass
 
