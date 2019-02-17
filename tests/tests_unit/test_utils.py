@@ -43,6 +43,11 @@ class TestTimestampToMs:
 
         assert timestamp_to_ms(time_ago_string) == expected_timestamp
 
+    @pytest.mark.parametrize("time_ago_string", ["1s", "4h", "13m-ag", "13m ago", "bla"])
+    def test_invalid_time_ago(self, time_ago_string):
+        with pytest.raises(ValueError, match=time_ago_string):
+            timestamp_to_ms(time_ago_string)
+
     def test_time_ago_real_time(self):
         expected_time_now = datetime.now().timestamp() * 1000
         time_now = timestamp_to_ms("now")
@@ -86,6 +91,11 @@ class TestTimeIntervalToMs:
     def test_time_interval_string(self, time_interval_string, expected_ms):
         assert time_interval_to_ms(time_interval_string) == expected_ms
 
+    @pytest.mark.parametrize("time_interval_string", ["-3h", "13m-ago", "13", "bla"])
+    def test_time_interval_string_invalid(self, time_interval_string):
+        with pytest.raises(ValueError, match=time_interval_string):
+            time_interval_to_ms(time_interval_string)
+
 
 class TestGranularityToMs:
     @pytest.mark.parametrize(
@@ -104,6 +114,7 @@ class TestGranularityToMs:
     def test_to_ms(self, granularity, expected_ms):
         assert granularity_to_ms(granularity) == expected_ms
 
-    def test_to_ms_not_week(self):
-        with pytest.raises(ValueError, match="format"):
-            granularity_to_ms("2w")
+    @pytest.mark.parametrize("granularity", ["2w", "-3h", "13m-ago", "13", "bla"])
+    def test_to_ms_invalid(self, granularity):
+        with pytest.raises(ValueError, match=granularity):
+            granularity_to_ms(granularity)

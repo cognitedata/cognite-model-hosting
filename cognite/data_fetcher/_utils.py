@@ -21,7 +21,7 @@ _unit_in_ms = {**_unit_in_ms_without_week, "w": 604800000}
 
 def _time_string_to_ms(pattern, string, unit_in_ms):
     pattern = pattern.format("|".join(unit_in_ms))
-    res = re.match(pattern, string)
+    res = re.fullmatch(pattern, string)
     if res:
         magnitude = int(res.group(1))
         unit = res.group(2)

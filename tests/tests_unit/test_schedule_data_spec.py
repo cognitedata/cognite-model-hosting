@@ -18,6 +18,7 @@ window_interval_test_cases = [
     ),
     WindowIntervalTestCase(start=3, end=6, stride=1, window_size=3, first=3, expected_windows=[(0, 3), (1, 4), (2, 5)]),
     WindowIntervalTestCase(start=5, end=11, stride=3, window_size=4, first=5, expected_windows=[(1, 5), (4, 8)]),
+    WindowIntervalTestCase(start=6, end=11, stride=3, window_size=4, first=5, expected_windows=[(4, 8)]),
     WindowIntervalTestCase(start=11, end=17, stride=3, window_size=4, first=5, expected_windows=[(7, 11), (10, 14)]),
     WindowIntervalTestCase(
         start=5, end=12, stride=3, window_size=4, first=5, expected_windows=[(1, 5), (4, 8), (7, 11)]
