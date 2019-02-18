@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
 from cognite.data_fetcher.data_fetcher import DataFetcher
 from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.data_fetcher.exceptions import (
@@ -11,7 +12,6 @@ from cognite.data_fetcher.exceptions import (
     InvalidFetchRequest,
     SpecValidationError,
 )
-
 from tests.utils import BASE_URL_V0_5
 
 
