@@ -6,6 +6,7 @@ import pandas as pd
 
 from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
+from cognite.model_hosting._utils import get_aggregate_func_return_name
 from cognite.model_hosting.data_fetcher.exceptions import (
     DirectoryDoesNotExist,
     InvalidAlias,
@@ -113,6 +114,19 @@ class TimeSeriesFetcher:
 
         return starts.pop(), ends.pop(), granularities.pop()
 
+    def __convert_ts_names_to_aliases(self, df: pd.DataFrame) -> pd.DataFrame:
+        name_to_label = {}
+        ts_ids = [ts.id for ts in self._specs.values()]
+        time_series = asyncio.get_event_loop().run_until_complete(self._cdp_client.get_time_series_by_id(ts_ids))
+        ts_names = {ts["id"]: ts["name"] for ts in time_series}
+        for alias, ts_spec in self._specs.items():
+            if ts_spec.aggregate:
+                agg_return_name = get_aggregate_func_return_name(ts_spec.aggregate)
+                name_to_label[ts_names[ts_spec.id] + "|" + agg_return_name] = alias
+            else:
+                name_to_label[ts_names[ts_spec.id]] = alias
+        return df.rename(columns=name_to_label)
+
     def fetch_dataframe(self, aliases: List[str]) -> pd.DataFrame:
         if type(aliases) != list:
             raise TypeError("Invalid argument type. Aliases should be a list of string")
@@ -123,9 +137,11 @@ class TimeSeriesFetcher:
             spec = self._specs[alias]
             time_series.append({"id": spec.id, "aggregate": spec.aggregate})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
-        return asyncio.get_event_loop().run_until_complete(
+        df = asyncio.get_event_loop().run_until_complete(
             self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         )
+        df_with_alias_columns = self.__convert_ts_names_to_aliases(df)
+        return df_with_alias_columns
 
     def _fetch_datapoints_single(self, alias):
         self._check_valid_alias(alias)
