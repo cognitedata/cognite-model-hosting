@@ -2,8 +2,8 @@ from collections import namedtuple
 
 import pytest
 
-from cognite.data_fetcher._utils import calculate_windows
-from cognite.data_fetcher.data_spec import DataSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
+from cognite.model_hosting._utils import calculate_windows
+from cognite.model_hosting.data_spec import DataSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
 
 WindowIntervalTestCase = namedtuple("TestCase", ["start", "end", "stride", "window_size", "first", "expected_windows"])
 

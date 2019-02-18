@@ -14,8 +14,8 @@ from marshmallow import (
     validates_schema,
 )
 
-from cognite.data_fetcher._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
-from cognite.data_fetcher.exceptions import SpecValidationError
+from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
+from cognite.model_hosting.exceptions import SpecValidationError
 
 
 class _BaseSpec:

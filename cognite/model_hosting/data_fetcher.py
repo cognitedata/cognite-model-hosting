@@ -4,9 +4,9 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from cognite.data_fetcher._client.cdp_client import CdpClient
-from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
-from cognite.data_fetcher.exceptions import (
+from cognite.model_hosting._client.cdp_client import CdpClient
+from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
+from cognite.model_hosting.exceptions import (
     DirectoryDoesNotExist,
     InvalidAlias,
     InvalidFetchRequest,

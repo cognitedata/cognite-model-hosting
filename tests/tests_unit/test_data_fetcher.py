@@ -4,9 +4,9 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from cognite.data_fetcher.data_fetcher import DataFetcher
-from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
-from cognite.data_fetcher.exceptions import (
+from cognite.model_hosting.data_fetcher import DataFetcher
+from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
+from cognite.model_hosting.exceptions import (
     DirectoryDoesNotExist,
     InvalidAlias,
     InvalidFetchRequest,
