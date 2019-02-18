@@ -3,7 +3,6 @@ import os
 from typing import Dict, List, Union
 
 import pandas as pd
-
 from cognite.data_fetcher._client.cdp_client import CdpClient
 from cognite.data_fetcher._utils import get_aggregate_func_return_name
 from cognite.data_fetcher.data_spec import DataSpec, FileSpec, TimeSeriesSpec
@@ -114,7 +113,7 @@ class TimeSeriesFetcher:
 
         return starts.pop(), ends.pop(), granularities.pop()
 
-    def __convert_ts_names_to_labels(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __convert_ts_names_to_aliases(self, df: pd.DataFrame) -> pd.DataFrame:
         name_to_label = {}
         ts_ids = [ts.id for ts in self._specs.values()]
         time_series = asyncio.get_event_loop().run_until_complete(self._cdp_client.get_time_series_by_id(ts_ids))
@@ -140,7 +139,7 @@ class TimeSeriesFetcher:
         df = asyncio.get_event_loop().run_until_complete(
             self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         )
-        df_with_alias_columns = self.__convert_ts_names_to_labels(df)
+        df_with_alias_columns = self.__convert_ts_names_to_aliases(df)
         return df_with_alias_columns
 
     def _fetch_datapoints_single(self, alias):
