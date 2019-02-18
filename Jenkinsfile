@@ -1,6 +1,6 @@
 @Library('jenkins-helpers@v0.1.12') _
 
-def label = "cognite-data-fetcher-${UUID.randomUUID().toString()}"
+def label = "cognite-model-hosting-${UUID.randomUUID().toString()}"
 
 podTemplate(
     label: label,
@@ -66,18 +66,14 @@ podTemplate(
                 sh("python3 setup.py sdist bdist_wheel")
             }
 
-            def deployToPyPi = false
+            def pipVersion = sh(returnStdout: true, script: 'pipenv run yolk -V cognite-model-hosting | sort -n | tail -1 | cut -d\\  -f 2').trim()
+            def currentVersion = sh(returnStdout: true, script: 'sed -n -e "/^__version__/p" cognite/model_hosting/__init__.py | cut -d\\" -f2').trim()
 
-            if (deployToPyPi) {
-                def pipVersion = sh(returnStdout: true, script: 'pipenv run yolk -V cognite-data-fetcher | sort -n | tail -1 | cut -d\\  -f 2').trim()
-                def currentVersion = sh(returnStdout: true, script: 'sed -n -e "/^__version__/p" cognite/data_fetcher/__init__.py | cut -d\\" -f2').trim()
-
-                println("This version: " + currentVersion)
-                println("Latest pip version: " + pipVersion)
-                if (env.BRANCH_NAME == 'master' && currentVersion != pipVersion) {
-                    stage('Release') {
-                        sh("pipenv run twine upload --config-file /pypi/.pypirc dist/*")
-                    }
+            println("This version: " + currentVersion)
+            println("Latest pip version: " + pipVersion)
+            if (env.BRANCH_NAME == 'master' && currentVersion != pipVersion) {
+                stage('Release') {
+                    sh("pipenv run twine upload --config-file /pypi/.pypirc dist/*")
                 }
             }
         }
