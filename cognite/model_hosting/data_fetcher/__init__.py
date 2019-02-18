@@ -1,0 +1,1 @@
+from cognite.model_hosting.data_fetcher.data_fetcher import DataFetcher

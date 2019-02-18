@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
-from cognite.model_hosting.exceptions import SpecValidationError
+from cognite.model_hosting.data_fetcher.exceptions import SpecValidationError
 
 
 class TestSpecValidation:

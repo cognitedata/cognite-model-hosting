@@ -6,8 +6,8 @@ from typing import Any, Dict, Union
 import aiohttp
 
 import cognite.model_hosting
-from cognite.model_hosting._client import utils
-from cognite.model_hosting.exceptions import ApiKeyError
+from cognite.model_hosting.data_fetcher._client import utils
+from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError
 
 DEFAULT_BASE_URL = "https://api.cognitedata.com"
 DEFAULT_NUM_OF_RETRIES = 3

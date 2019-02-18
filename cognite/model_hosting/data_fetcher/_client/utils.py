@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Dict
 
-from cognite.model_hosting.exceptions import DataFetcherHttpError
+from cognite.model_hosting.data_fetcher.exceptions import DataFetcherHttpError
 
 
 def format_params(d: Dict) -> Dict:

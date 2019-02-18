@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
+from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
+from cognite.model_hosting.data_fetcher.exceptions import SpecValidationError
 from marshmallow import (
     RAISE,
     Schema,
@@ -13,9 +15,6 @@ from marshmallow import (
     validates,
     validates_schema,
 )
-
-from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
-from cognite.model_hosting.exceptions import SpecValidationError
 
 
 class _BaseSpec:
