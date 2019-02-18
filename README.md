@@ -4,7 +4,7 @@
 
 Cognite Model Hoting
 ====================
-[![build](https://webhooks.dev.cognite.ai/build/buildStatus/icon?job=github-builds/cognite-data-fetcher/master)](https://jenkins.cognite.ai/job/github-builds/job/cognite-data-fetcher/job/master/)
+[![Build Status](https://jenkins.cognite.ai/buildStatus/icon?job=github-builds/cognite-model-hosting/master)](https://jenkins.cognite.ai/job/github-builds/job/cognite-model-hosting/job/master/)
 [![codecov](https://codecov.io/gh/cognitedata/cognite-data-fetcher/branch/master/graph/badge.svg?token=0715UMyLlV)](https://codecov.io/gh/cognitedata/cognite-data-fetcher)
 [![PyPI version](https://badge.fury.io/py/cognite-data-fetcher.svg)](https://pypi.org/project/cognite-data-fetcher/)
 [![tox](https://img.shields.io/badge/tox-3.5%2B-blue.svg)](https://www.python.org/downloads/release/python-350/)
