@@ -4,7 +4,6 @@ import sys
 from typing import Any, Dict, Union
 
 import aiohttp
-
 import cognite.data_fetcher
 from cognite.data_fetcher._client import utils
 from cognite.data_fetcher.exceptions import ApiKeyError
@@ -29,7 +28,6 @@ class ApiClient:
             thread_local_project = getattr(credentials, "project", None)
 
         environment_api_key = os.getenv("COGNITE_API_KEY")
-        environment_project = os.getenv("COGNITE_PROJECT")
         environment_base_url = os.getenv("COGNITE_BASE_URL")
         environment_num_of_retries = os.getenv("COGNITE_NUM_RETRIES")
 
@@ -45,7 +43,7 @@ class ApiClient:
             "accept": "application/json",
             "User-agent": "cognite-data-fetcher/{}".format(cognite.data_fetcher.__version__),
         }
-        self._project = project or thread_local_project or environment_project or self._get_project(self._api_key)
+        self._project = project or thread_local_project or self._get_project(self._api_key)
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)
         self._base_url_v0_6 = self._base_url + "/api/0.6/projects/{}".format(self._project)
 
