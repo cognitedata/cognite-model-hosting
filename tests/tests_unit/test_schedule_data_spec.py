@@ -3,7 +3,7 @@ from collections import namedtuple
 import pytest
 
 from cognite.data_fetcher._utils import calculate_windows
-from cognite.data_fetcher.data_spec import DataSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
+from cognite.data_fetcher.data_spec import DataSpec, ScheduleInputSpec, ScheduleInputTimeSeriesSpec, TimeSeriesSpec
 
 WindowIntervalTestCase = namedtuple("TestCase", ["start", "end", "stride", "window_size", "first", "expected_windows"])
 
@@ -35,8 +35,8 @@ def test_calculate_window_intervals(start, end, stride, window_size, first, expe
 
 
 def test_get_windowed_data_specs():
-    schedule_ts_spec = {"ts1": ScheduleTimeSeriesSpec(id=1), "ts2": ScheduleTimeSeriesSpec(id=2)}
-    schedule_data_spec = ScheduleDataSpec(stride="1m", window_size="1m", start=60000, time_series=schedule_ts_spec)
+    schedule_ts_spec = {"ts1": ScheduleInputTimeSeriesSpec(id=1), "ts2": ScheduleInputTimeSeriesSpec(id=2)}
+    schedule_data_spec = ScheduleInputSpec(stride="1m", window_size="1m", start=60000, time_series=schedule_ts_spec)
     data_specs = schedule_data_spec.get_data_specs(start=60000, end=6 * 60000)
 
     expected_data_specs = []
