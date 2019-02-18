@@ -12,6 +12,8 @@ pytest-cov = "*"
 aioresponses = "*"
 pre-commit = "*"
 tox-pyenv = "*"
+twine = "*"
+yolk3k = "*"
 
 [packages]
 pandas = "*"
