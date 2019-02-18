@@ -4,12 +4,12 @@ from setuptools import find_packages, setup
 
 packages = find_packages(exclude=["tests*"])
 
-version = re.search('^__version__\s*=\s*"(.*)"', open("cognite/data_fetcher/__init__.py").read(), re.M).group(1)
+version = re.search('^__version__\s*=\s*"(.*)"', open("cognite/model_hosting/__init__.py").read(), re.M).group(1)
 
 setup(
-    name="cognite-data-fetcher",
+    name="cognite-model-hosting",
     version=version,
-    description="Cognite Data Fetcher for Python",
+    description="Utilities Cognite's model hosting environment",
     url="",  # TODO
     author="Nils Barlaug",
     author_email="nils.barlaug@cognite.com",

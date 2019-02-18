@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from cognite.data_fetcher._utils import granularity_to_ms, time_interval_to_ms, time_offset_to_ms, timestamp_to_ms
+from cognite.model_hosting._utils import granularity_to_ms, time_interval_to_ms, time_offset_to_ms, timestamp_to_ms
 
 
 class TestTimestampToMs:
@@ -21,7 +21,7 @@ class TestTimestampToMs:
         assert 1514764800000 == timestamp_to_ms(datetime(2018, 1, 1))
         assert 1546300800000 == timestamp_to_ms(datetime(2019, 1, 1))
 
-    @mock.patch("cognite.data_fetcher._utils.time.time")
+    @mock.patch("cognite.model_hosting._utils.time.time")
     @pytest.mark.parametrize(
         "time_ago_string, expected_timestamp",
         [

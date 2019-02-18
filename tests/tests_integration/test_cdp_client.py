@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from cognite.data_fetcher._client.cdp_client import CdpClient
+from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
 from tests.utils import random_string, run_until_complete
 
 CLIENT = None

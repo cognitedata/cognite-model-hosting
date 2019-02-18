@@ -5,9 +5,9 @@ from typing import Any, Dict, Union
 
 import aiohttp
 
-import cognite.data_fetcher
-from cognite.data_fetcher._client import utils
-from cognite.data_fetcher.exceptions import ApiKeyError
+import cognite.model_hosting
+from cognite.model_hosting.data_fetcher._client import utils
+from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError
 
 DEFAULT_BASE_URL = "https://api.cognitedata.com"
 DEFAULT_NUM_OF_RETRIES = 3
@@ -42,7 +42,7 @@ class ApiClient:
             "api-key": self._api_key,
             "content-type": "application/json",
             "accept": "application/json",
-            "User-agent": "cognite-data-fetcher/{}".format(cognite.data_fetcher.__version__),
+            "User-agent": "cognite-data-fetcher/{}".format(cognite.model_hosting.__version__),
         }
         self._project = project or thread_local_project or self._get_project(self._api_key)
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)

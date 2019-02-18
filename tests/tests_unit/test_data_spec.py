@@ -5,7 +5,8 @@ from unittest import mock
 
 import pytest
 
-from cognite.data_fetcher.data_spec import (
+from cognite.model_hosting.data_fetcher.exceptions import SpecValidationError
+from cognite.model_hosting.data_spec import (
     DataSpec,
     FileSpec,
     ScheduleDataSpec,
@@ -15,7 +16,6 @@ from cognite.data_fetcher.data_spec import (
     ScheduleOutputTimeSeriesSpec,
     TimeSeriesSpec,
 )
-from cognite.data_fetcher.exceptions import SpecValidationError
 
 
 class TestSpecValidation:
@@ -295,7 +295,7 @@ def test_copy():
 class TestSpecConstructor:
     @pytest.fixture(autouse=True, scope="class")
     def mock_time(self):
-        with mock.patch("cognite.data_fetcher._utils.time.time") as m:
+        with mock.patch("cognite.model_hosting._utils.time.time") as m:
             m.return_value = 10 ** 6
             yield
 
