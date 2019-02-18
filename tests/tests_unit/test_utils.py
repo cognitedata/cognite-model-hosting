@@ -3,6 +3,7 @@ from time import sleep
 from unittest import mock
 
 import pytest
+
 from cognite.model_hosting._utils import granularity_to_ms, time_interval_to_ms, timestamp_to_ms
 
 
