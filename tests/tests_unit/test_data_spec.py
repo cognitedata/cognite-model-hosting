@@ -5,7 +5,16 @@ from unittest import mock
 
 import pytest
 
-from cognite.data_fetcher.data_spec import DataSpec, FileSpec, ScheduleDataSpec, ScheduleTimeSeriesSpec, TimeSeriesSpec
+from cognite.data_fetcher.data_spec import (
+    DataSpec,
+    FileSpec,
+    ScheduleDataSpec,
+    ScheduleInputSpec,
+    ScheduleInputTimeSeriesSpec,
+    ScheduleOutputSpec,
+    ScheduleOutputTimeSeriesSpec,
+    TimeSeriesSpec,
+)
 from cognite.data_fetcher.exceptions import SpecValidationError
 
 
@@ -29,8 +38,8 @@ class TestSpecValidation:
             {"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
         ),
         TestCase(
-            "schedule_time_series",
-            ScheduleTimeSeriesSpec(id=6, aggregate="avg", granularity="1m"),
+            "schedule_input_time_series",
+            ScheduleInputTimeSeriesSpec(id=6, aggregate="avg", granularity="1m"),
             {"id": 6, "aggregate": "avg", "granularity": "1m"},
         ),
         TestCase("empty_data_spec", DataSpec(), {}),
@@ -52,19 +61,53 @@ class TestSpecValidation:
             },
         ),
         TestCase(
-            "minimal_schedule_data_spec",
-            ScheduleDataSpec(stride=60000, window_size=120000, start=123),
+            "minimal_schedule_input_spec",
+            ScheduleInputSpec(stride=60000, window_size=120000, start=123),
             {"stride": 60000, "windowSize": 120000, "start": 123},
+        ),
+        TestCase(
+            "full_schedule_input_spec",
+            ScheduleInputSpec(
+                stride=60000,
+                window_size=120000,
+                start=123,
+                time_series={"ts1": ScheduleInputTimeSeriesSpec(id=6), "ts2": ScheduleInputTimeSeriesSpec(id=7)},
+            ),
+            {"stride": 60000, "windowSize": 120000, "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
+        ),
+        TestCase(
+            "schedule_output_time_series_spec",
+            ScheduleOutputTimeSeriesSpec(id=123, offset=-5),
+            {"id": 123, "offset": -5},
+        ),
+        TestCase("minimal_schedule_output_spec", ScheduleOutputSpec(), {}),
+        TestCase(
+            "full_schedule_output_spec",
+            ScheduleOutputSpec(
+                time_series={
+                    "ts1": ScheduleOutputTimeSeriesSpec(id=123, offset=5),
+                    "ts2": ScheduleOutputTimeSeriesSpec(id=234, offset=0),
+                }
+            ),
+            {"timeSeries": {"ts1": {"id": 123, "offset": 5}, "ts2": {"id": 234, "offset": 0}}},
+        ),
+        TestCase(
+            "minimal_schedule_data_spec",
+            ScheduleDataSpec(input=ScheduleInputSpec(stride=1, window_size=2, start=3), output=ScheduleOutputSpec()),
+            {"input": {"stride": 1, "windowSize": 2, "start": 3}, "output": {}},
         ),
         TestCase(
             "full_schedule_data_spec",
             ScheduleDataSpec(
-                stride=60000,
-                window_size=120000,
-                start=123,
-                time_series={"ts1": ScheduleTimeSeriesSpec(id=6), "ts2": ScheduleTimeSeriesSpec(id=7)},
+                input=ScheduleInputSpec(
+                    stride=1, window_size=2, start=3, time_series={"ts1": ScheduleInputTimeSeriesSpec(id=5)}
+                ),
+                output=ScheduleOutputSpec(time_series={"ts1": ScheduleOutputTimeSeriesSpec(id=123, offset=100)}),
             ),
-            {"stride": 60000, "windowSize": 120000, "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
+            {
+                "input": {"stride": 1, "windowSize": 2, "start": 3, "timeSeries": {"ts1": {"id": 5}}},
+                "output": {"timeSeries": {"ts1": {"id": 123, "offset": 100}}},
+            },
         ),
     ]
 
@@ -136,23 +179,23 @@ class TestSpecValidation:
             },
         ),
         InvalidTestCase(
-            name="schedule_time_series_with_start_end",
-            type=ScheduleTimeSeriesSpec,
+            name="schedule_input_time_series_with_start_end",
+            type=ScheduleInputTimeSeriesSpec,
             constructor=None,
             primitive={"id": 6, "start": 123, "end": 234},
             errors={"start": ["Unknown field."], "end": ["Unknown field."]},
         ),
         InvalidTestCase(
-            name="schedule_data_spec_missing_fields",
-            type=ScheduleDataSpec,
+            name="schedule_input_spec_missing_fields",
+            type=ScheduleInputSpec,
             constructor=None,
             primitive={"start": 123},
             errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
         ),
         InvalidTestCase(
-            name="schedule_data_spec_invalid_stride_window_size",
-            type=ScheduleDataSpec,
-            constructor=lambda: ScheduleDataSpec(window_size=0, stride=-1, start=123),
+            name="schedule_input_spec_invalid_stride_window_size",
+            type=ScheduleInputSpec,
+            constructor=None,
             primitive={"windowSize": 0, "stride": -1, "start": 123},
             errors={"stride": ["Must be at least 1."], "windowSize": ["Must be at least 1."]},
         ),
@@ -173,6 +216,20 @@ class TestSpecValidation:
         #     primitive={"stride": "1m", "windowSize": "5m", "timeSeries": {"ts1": {"id": "abc"}}},
         #     errors={"timeSeries": {"ts1": {"value": {"id": ["Not a valid integer."]}}}},
         # ),
+        InvalidTestCase(
+            name="schedule_output_time_series_spec_missing_fields",
+            type=ScheduleOutputTimeSeriesSpec,
+            constructor=lambda: ScheduleOutputTimeSeriesSpec(id=None, offset=None),
+            primitive={},
+            errors={"id": ["Missing data for required field."], "offset": ["Missing data for required field."]},
+        ),
+        InvalidTestCase(
+            name="schedule_data_spec_missing_fields",
+            type=ScheduleDataSpec,
+            constructor=None,
+            primitive={},
+            errors={"input": ["Missing data for required field."], "output": ["Missing data for required field."]},
+        ),
     ]
 
     @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
@@ -258,17 +315,24 @@ class TestSpecConstructor:
         ),
         TestCase(
             name="schedule_data_spec_default_start_now",
-            constructor=lambda: ScheduleDataSpec(stride=123, window_size=234),
+            constructor=lambda: ScheduleInputSpec(stride=123, window_size=234),
             primitive={"stride": 123, "windowSize": 234, "start": 10 ** 9},
         ),
         TestCase(
             name="schedule_data_spec_string_formats",
-            constructor=lambda: ScheduleDataSpec(stride="1m", window_size="2m", start="2m-ago"),
+            constructor=lambda: ScheduleInputSpec(stride="1m", window_size="2m", start="2m-ago"),
             primitive={"stride": 60000, "windowSize": 120000, "start": 10 ** 9 - 2 * 60 * 1000},
         ),
         TestCase(
             name="schedule_data_spec_datetime",
-            constructor=lambda: ScheduleDataSpec(
+            constructor=lambda: ScheduleInputSpec(
+                stride=timedelta(minutes=1), window_size=timedelta(minutes=2), start=datetime(2018, 1, 1)
+            ),
+            primitive={"stride": 60000, "windowSize": 120000, "start": 1514764800000},
+        ),
+        TestCase(
+            name="schedule_data_spec_datetime",
+            constructor=lambda: ScheduleInputSpec(
                 stride=timedelta(minutes=1), window_size=timedelta(minutes=2), start=datetime(2018, 1, 1)
             ),
             primitive={"stride": 60000, "windowSize": 120000, "start": 1514764800000},

@@ -80,7 +80,7 @@ class TimeSeriesSpec(_BaseSpec):
         self.include_outside_points = include_outside_points
 
 
-class ScheduleTimeSeriesSpec(_BaseSpec):
+class ScheduleInputTimeSeriesSpec(_BaseSpec):
     def __init__(self, id: int, aggregate: str = None, granularity: str = None, include_outside_points: bool = None):
         self.id = id
         self.aggregate = aggregate
@@ -101,20 +101,18 @@ class DataSpec(_BaseSpec):
         self.validate()
 
 
-class ScheduleDataSpec(_BaseSpec):
+class ScheduleInputSpec(_BaseSpec):
     def __init__(
         self,
         stride: Union[int, str, timedelta],
         window_size: Union[int, str, timedelta],
         start: Union[int, str, datetime] = "now",
-        time_series: Dict[str, ScheduleTimeSeriesSpec] = None,
+        time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None,
     ):
         self.stride = time_interval_to_ms(stride)
         self.window_size = time_interval_to_ms(window_size)
         self.start = timestamp_to_ms(start)
         self.time_series = time_series or {}
-
-        self.validate()
 
     def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
@@ -138,6 +136,25 @@ class ScheduleDataSpec(_BaseSpec):
             }
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
+
+
+class ScheduleOutputTimeSeriesSpec(_BaseSpec):
+    def __init__(self, id: int, offset: Union[int, str, timedelta] = 0):
+        self.id = id
+        self.offset = offset
+
+
+class ScheduleOutputSpec(_BaseSpec):
+    def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
+        self.time_series = time_series
+
+
+class ScheduleDataSpec(_BaseSpec):
+    def __init__(self, input: ScheduleInputSpec, output: ScheduleOutputSpec):
+        self.input = input
+        self.output = output
+
+        self.validate()
 
 
 class _BaseSchema(Schema):
@@ -210,21 +227,47 @@ class _DataSpecSchema(_BaseSchema):
     files = fields.Dict(keys=fields.Str(), values=fields.Nested(_FileSpecSchema))
 
 
-class _ScheduleDataSpecSchema(_BaseSchema):
-    _default_spec = ScheduleDataSpec
+class _ScheduleInputDataSpecSchema(_BaseSchema):
+    _default_spec = ScheduleInputSpec
 
     stride = fields.Int(required=True, validate=validate.Range(min=1))
     windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
-    start = fields.Int(required=True)
+    start = fields.Int(required=True, validate=validate.Range(min=0))
     timeSeries = fields.Dict(
         keys=fields.Str(),
-        values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))),
+        values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
 
 
+class _ScheduleOutputTimeSeriesSpecSchema(_BaseSchema):
+    _default_spec = ScheduleOutputTimeSeriesSpec
+
+    id = fields.Int(required=True)
+    offset = fields.Int(required=True)
+
+
+class _ScheduleOutputDataSpecSchema(_BaseSchema):
+    _default_spec = ScheduleOutputSpec
+
+    timeSeries = fields.Dict(
+        keys=fields.Str(), values=fields.Nested(_ScheduleOutputTimeSeriesSpecSchema), attribute="time_series"
+    )
+
+
+class _ScheduleDataSpec(_BaseSchema):
+    _ignore_values = []
+    _default_spec = ScheduleDataSpec
+
+    input = fields.Nested(_ScheduleInputDataSpecSchema, required=True)
+    output = fields.Nested(_ScheduleOutputDataSpecSchema, required=True)
+
+
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
-ScheduleTimeSeriesSpec._schema = _TimeSeriesSpecSchema(spec=ScheduleTimeSeriesSpec, exclude=("start", "end"))
+ScheduleInputTimeSeriesSpec._schema = _TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))
 FileSpec._schema = _FileSpecSchema()
 DataSpec._schema = _DataSpecSchema()
-ScheduleDataSpec._schema = _ScheduleDataSpecSchema()
+ScheduleInputSpec._schema = _ScheduleInputDataSpecSchema()
+ScheduleOutputTimeSeriesSpec._schema = _ScheduleOutputTimeSeriesSpecSchema()
+ScheduleOutputSpec._schema = _ScheduleOutputDataSpecSchema()
+ScheduleDataSpec._schema = _ScheduleDataSpec()
