@@ -174,7 +174,17 @@ class TestTimeSeries:
             assert end == 5000
             return pd.DataFrame([[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "ts1", "ts2"])
 
+        async def get_time_series_by_id(*args, **kwargs):
+            return [
+                {"name": "myts1", "id": 1234},
+                {"name": "myts2", "id": 2345},
+                {"name": "myts3", "id": 3456},
+                {"name": "myts4", "id": 4567},
+                {"name": "myts5", "id": 5678},
+            ]
+
         cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
+        cdp_client_mock.get_time_series_by_id.side_effect = get_time_series_by_id
         df = data_fetcher.time_series.fetch_dataframe(["ts1", "ts2"])
         assert (df.columns == ["timestamp", "ts1", "ts2"]).all()
         assert df.shape == (3, 3)
@@ -200,6 +210,27 @@ class TestTimeSeries:
     def test_fetch_dataframe_not_aggregate(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidFetchRequest, match="aggregate"):
             data_fetcher.time_series.fetch_dataframe(["ts1", "ts5"])
+
+    def test_fetch_dataframe_column_names_are_aliases(self, data_fetcher, cdp_client_mock, http_mock):
+        async def get_datapoints_frame(*args, **kwargs):
+            return pd.DataFrame(
+                [[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "myts1|average", "myts2|max"]
+            )
+
+        async def get_time_series_by_id(*args, **kwargs):
+            return [
+                {"name": "myts1", "id": 1234},
+                {"name": "myts2", "id": 2345},
+                {"name": "myts3", "id": 3456},
+                {"name": "myts4", "id": 4567},
+                {"name": "myts5", "id": 5678},
+            ]
+
+        cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
+        cdp_client_mock.get_time_series_by_id.side_effect = get_time_series_by_id
+
+        df = data_fetcher.time_series.fetch_dataframe(["ts1", "ts2"])
+        assert (df.columns == ["timestamp", "ts1", "ts2"]).all()
 
     def test_fetch_datapoints_invalid_type(self, data_fetcher, cdp_client_mock):
         with pytest.raises(TypeError, match="type"):

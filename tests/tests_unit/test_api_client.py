@@ -50,14 +50,13 @@ def test_create_default_client(http_mock):
 def set_environment_config():
     os.environ["COGNITE_NUM_RETRIES"] = "0"
     os.environ["COGNITE_BASE_URL"] = "test"
-    os.environ["COGNITE_PROJECT"] = "test"
     yield
     del os.environ["COGNITE_NUM_RETRIES"]
     del os.environ["COGNITE_BASE_URL"]
-    del os.environ["COGNITE_PROJECT"]
 
 
 def test_create_client_environment_config(http_mock, set_environment_config):
+    http_mock.get("test/login/status", status=200, payload={"data": {"project": "test", "loggedIn": True}})
     client = ApiClient()
 
     assert "test" == client._base_url

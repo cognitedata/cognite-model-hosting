@@ -127,3 +127,25 @@ def time_offset_to_ms(t: Union[int, str, timedelta]):
         return int(round(t.total_seconds() * 1000))
     else:
         raise TypeError("Time offset `{}` was of type {}, but must be int, str or timedelta,".format(t, type(t)))
+
+
+def get_aggregate_func_return_name(agg_func: str) -> str:
+    agg_funcs = {
+        "avg": "average",
+        "average": "average",
+        "count": "count",
+        "continuousvariance": "continuousvariance",
+        "cv": "continuousvariance",
+        "discretevariance": "discretevariance",
+        "dv": "discretevariance",
+        "int": "interpolation",
+        "interpolation": "interpolation",
+        "max": "max",
+        "min": "min",
+        "step": "stepinterpolation",
+        "stepinterpolation": "stepinterpolation",
+        "sum": "sum",
+        "totalvariation": "totalvariation",
+        "tv": "totalvariation",
+    }
+    return agg_funcs.get(agg_func)
