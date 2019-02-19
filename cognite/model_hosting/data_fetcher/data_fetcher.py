@@ -6,13 +6,9 @@ import pandas as pd
 
 from cognite.model_hosting._utils import get_aggregate_func_return_name
 from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
-from cognite.model_hosting.data_fetcher.exceptions import (
-    DirectoryDoesNotExist,
-    InvalidAlias,
-    InvalidFetchRequest,
-    SpecValidationError,
-)
+from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
+from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
 
 class FileFetcher:
