@@ -255,7 +255,7 @@ class _ScheduleOutputDataSpecSchema(_BaseSchema):
     )
 
 
-class _ScheduleDataSpec(_BaseSchema):
+class _ScheduleDataSpecSchema(_BaseSchema):
     _ignore_values = []
     _default_spec = ScheduleDataSpec
 
@@ -270,4 +270,4 @@ DataSpec._schema = _DataSpecSchema()
 ScheduleInputSpec._schema = _ScheduleInputDataSpecSchema()
 ScheduleOutputTimeSeriesSpec._schema = _ScheduleOutputTimeSeriesSpecSchema()
 ScheduleOutputSpec._schema = _ScheduleOutputDataSpecSchema()
-ScheduleDataSpec._schema = _ScheduleDataSpec()
+ScheduleDataSpec._schema = _ScheduleDataSpecSchema()
