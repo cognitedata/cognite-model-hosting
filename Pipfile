@@ -17,7 +17,7 @@ yolk3k = "*"
 
 [packages]
 pandas = "*"
-aiohttp = "*"
+aiohttp = "==3.5.*"
 marshmallow = "==3.0.0rc4"
 
 [requires]
