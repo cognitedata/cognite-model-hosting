@@ -1,3 +1,8 @@
+import typing as _typing  # isort:skip
+
+# Hack to let aiohttp and aioresponses support Python 3.5.0
+_typing.TYPE_CHECKING = False  # isort:skip
+
 import pytest
 from aioresponses import aioresponses
 
