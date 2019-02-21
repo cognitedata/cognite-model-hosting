@@ -53,7 +53,7 @@ podTemplate(
                 sh("pipenv run isort -w 120 -m 3 -tc -rc --check-only .")
             }
             stage('Test and coverage report') {
-                sh("pyenv local 3.5.5 3.6.6 system")
+                sh("pyenv local 3.5.0 3.6.6 system")
                 sh("pipenv run tox -p all")
                 junit(allowEmptyResults: true, testResults: '**/test-report.xml')
                 summarizeTestResults()
