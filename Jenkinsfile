@@ -10,7 +10,7 @@ podTemplate(
     ],
     containers: [
         containerTemplate(name: 'python',
-            image: 'eu.gcr.io/cognitedata/multi-python:9b8bde1',
+            image: 'eu.gcr.io/cognitedata/multi-python:7040fac',
             command: '/bin/cat -',
             resourceRequestCpu: '1000m',
             resourceRequestMemory: '800Mi',
