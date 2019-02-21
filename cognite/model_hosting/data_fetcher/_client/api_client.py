@@ -15,7 +15,7 @@ DEFAULT_NUM_OF_RETRIES = 3
 HTTP_STATUS_CODES_TO_RETRY = [429, 500, 502, 503]
 HTTP_METHODS_TO_RETRY = ["GET", "DELETE"]
 
-CLIENT_SESSION = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
+CLIENT_SESSION = aiohttp.ClientSession(read_timeout=20, conn_timeout=5)
 
 
 class ApiClient:
