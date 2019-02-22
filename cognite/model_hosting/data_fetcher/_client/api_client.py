@@ -70,17 +70,9 @@ def _raise_API_error(res: Response):
 
 class ApiClient:
     def __init__(self, api_key: str = None, project: str = None, base_url: str = None):
-        thread_local_api_key = None
-        thread_local_project = None
-        if "cognite._thread_local" in sys.modules:
-            from cognite._thread_local import credentials
-
-            thread_local_api_key = getattr(credentials, "api_key", None)
-            thread_local_project = getattr(credentials, "project", None)
-
+        thread_local_api_key, thread_local_project = self._get_thread_local_credentials()
         environment_api_key = os.getenv("COGNITE_API_KEY")
         environment_base_url = os.getenv("COGNITE_BASE_URL")
-        environment_num_of_retries = os.getenv("COGNITE_NUM_RETRIES")
 
         self._requests_session = _REQUESTS_SESSION
         self._api_key = api_key or thread_local_api_key or environment_api_key
@@ -163,3 +155,13 @@ class ApiClient:
         elif api_version == "0.6":
             return self._base_url_v0_6 + url
         return self._base_url + url
+
+    def _get_thread_local_credentials(self):
+        thread_local_api_key = None
+        thread_local_project = None
+        if "cognite._thread_local" in sys.modules:
+            from cognite._thread_local import credentials
+
+            thread_local_api_key = getattr(credentials, "api_key", None)
+            thread_local_project = getattr(credentials, "project", None)
+        return thread_local_api_key, thread_local_project
