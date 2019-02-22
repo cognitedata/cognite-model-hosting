@@ -14,6 +14,6 @@ setup(
     author="Nils Barlaug",
     author_email="nils.barlaug@cognite.com",
     packages=packages,
-    install_requires=["aiohttp==2.3.10", "pandas", "marshmallow==3.0.0rc4"],
+    install_requires=["pandas", "marshmallow==3.0.0rc4", "requests>=2.21.0,<3.0.0"],
     python_requires=">=3.5",
 )
