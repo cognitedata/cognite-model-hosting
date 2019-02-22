@@ -9,7 +9,6 @@ black = "==18.9b0"
 isort = "*"
 pytest = "*"
 pytest-cov = "*"
-aioresponses = "*"
 pre-commit = "*"
 tox-pyenv = "*"
 twine = "*"
@@ -17,8 +16,9 @@ yolk3k = "*"
 
 [packages]
 pandas = "*"
-aiohttp = "==2.3.10"
 marshmallow = "==3.0.0rc4"
+requests = "<3.0.0,>=2.21.0"
+responses = "*"
 
 [requires]
 python_version = "3.7"

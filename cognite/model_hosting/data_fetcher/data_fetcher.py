@@ -1,5 +1,5 @@
-import asyncio
 import os
+from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Dict, List, Union
 
 import pandas as pd
@@ -9,6 +9,14 @@ from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
 from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
+
+NUMBER_OF_THREADS = 16
+
+
+def _execute_tasks_concurrently(func, tasks):
+    with ThreadPoolExecutor(NUMBER_OF_THREADS) as p:
+        futures = [p.submit(func, *task) for task in tasks]
+        return [future.result() for future in futures]
 
 
 class FileFetcher:
@@ -31,34 +39,34 @@ class FileFetcher:
             raise DirectoryDoesNotExist(directory)
 
         if isinstance(alias, str):
-            futures = [self._download_single_file(alias, directory)]
+            tasks = [(alias, directory)]
         elif isinstance(alias, list):
-            futures = [self._download_single_file(a, directory) for a in alias]
+            tasks = [(a, directory) for a in alias]
         else:
             raise TypeError("alias must be of type str or list, was {}".format(type(alias)))
 
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+        _execute_tasks_concurrently(self._download_single_file, tasks)
 
     def fetch_to_memory(self, alias: Union[str, List[str]]) -> Union[bytes, Dict[str, bytes]]:
         if isinstance(alias, str):
-            return asyncio.get_event_loop().run_until_complete(self._download_single_file_to_memory(alias))[alias]
+            return self._download_single_file_to_memory(alias)[alias]
         elif isinstance(alias, list):
             files = {}
-            futures = [self._download_single_file_to_memory(a) for a in alias]
-            res = asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+            tasks = [(a,) for a in alias]
+            res = _execute_tasks_concurrently(self._download_single_file_to_memory, tasks)
             for file in res:
                 files.update(file)
             return files
         raise TypeError("alias must be of type str or list, was {}".format(type(alias)))
 
-    async def _download_single_file(self, alias: str, directory: str):
+    def _download_single_file(self, alias: str, directory: str):
         file_id = self.get_spec(alias).id
         file_path = os.path.join(directory, alias)
-        await self._cdp_client.download_file(file_id, file_path)
+        self._cdp_client.download_file(file_id, file_path)
 
-    async def _download_single_file_to_memory(self, alias):
+    def _download_single_file_to_memory(self, alias):
         file_id = self.get_spec(alias).id
-        return {alias: await self._cdp_client.download_file_to_memory(file_id)}
+        return {alias: self._cdp_client.download_file_to_memory(file_id)}
 
 
 class TimeSeriesFetcher:
@@ -113,7 +121,7 @@ class TimeSeriesFetcher:
     def __convert_ts_names_to_aliases(self, df: pd.DataFrame) -> pd.DataFrame:
         name_to_label = {}
         ts_ids = [ts.id for ts in self._specs.values()]
-        time_series = asyncio.get_event_loop().run_until_complete(self._cdp_client.get_time_series_by_id(ts_ids))
+        time_series = self._cdp_client.get_time_series_by_id(ts_ids)
         ts_names = {ts["id"]: ts["name"] for ts in time_series}
         for alias, ts_spec in self._specs.items():
             if ts_spec.aggregate:
@@ -133,9 +141,7 @@ class TimeSeriesFetcher:
             spec = self._specs[alias]
             time_series.append({"id": spec.id, "aggregate": spec.aggregate})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
-        df = asyncio.get_event_loop().run_until_complete(
-            self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
-        )
+        df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         df_with_alias_columns = self.__convert_ts_names_to_aliases(df)
         return df_with_alias_columns
 
@@ -143,24 +149,18 @@ class TimeSeriesFetcher:
         self._check_valid_alias(alias)
 
         spec = self._specs[alias]
-        return asyncio.get_event_loop().run_until_complete(
-            self._cdp_client.get_datapoints_frame_single(
-                spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
-            )
+        return self._cdp_client.get_datapoints_frame_single(
+            spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
         )
 
     def _fetch_datapoints_multiple(self, aliases):
         self._check_valid_aliases(aliases)
 
-        futures = []
+        tasks = []
         for alias in aliases:
             spec = self._specs[alias]
-            futures.append(
-                self._cdp_client.get_datapoints_frame_single(
-                    spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
-                )
-            )
-        res = asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+            tasks.append((spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points))
+        res = _execute_tasks_concurrently(self._cdp_client.get_datapoints_frame_single, tasks)
         data_frames = {alias: df for alias, df in zip(aliases, res)}
         return data_frames
 

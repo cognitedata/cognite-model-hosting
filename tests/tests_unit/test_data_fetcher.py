@@ -11,13 +11,8 @@ from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 from tests.utils import BASE_URL_V0_5
 
 
-@pytest.fixture(autouse=True)
-def avoid_login_status(http_mock):
-    pass
-
-
 @pytest.mark.parametrize("data_spec", [DataSpec(), {}, "{}"])
-def test_empty_data_spec(http_mock, data_spec):
+def test_empty_data_spec(rsps, data_spec):
     data_fetcher = DataFetcher(data_spec)
     assert data_fetcher.get_data_spec() == DataSpec()
 
@@ -40,7 +35,7 @@ class TestFileFetcher:
         return {"f1": FileSpec(id=123), "f2": FileSpec(id=234)}
 
     @pytest.fixture
-    def data_fetcher(self, file_specs, http_mock):
+    def data_fetcher(self, file_specs, rsps):
         data_spec = DataSpec(files=file_specs)
         data_fetcher = DataFetcher(data_spec)
         return data_fetcher
@@ -66,12 +61,13 @@ class TestFileFetcher:
         assert spec.id != 1000
 
     @pytest.fixture
-    def mock_file_download(self, http_mock):
+    def mock_file_download(self, rsps):
         mock_download_url = "http://download.url"
-        http_mock.get(BASE_URL_V0_5 + "/files/123/downloadlink", status=200, payload={"data": mock_download_url})
-        http_mock.get(mock_download_url, status=200, body=b"blablabla")
-        http_mock.get(BASE_URL_V0_5 + "/files/234/downloadlink", status=200, payload={"data": mock_download_url})
-        http_mock.get(mock_download_url, status=200, body=b"blablabla")
+        rsps.assert_all_requests_are_fired = False
+        rsps.add(rsps.GET, BASE_URL_V0_5 + "/files/123/downloadlink", status=200, json={"data": mock_download_url})
+        rsps.add(rsps.GET, mock_download_url, status=200, body=b"blablabla")
+        rsps.add(rsps.GET, BASE_URL_V0_5 + "/files/234/downloadlink", status=200, json={"data": mock_download_url})
+        rsps.add(rsps.GET, mock_download_url, status=200, body=b"blablabla")
 
     @staticmethod
     def assert_file_exists_and_has_content(file_path, content):
@@ -163,14 +159,14 @@ class TestTimeSeries:
             data_fetcher.time_series.get_spec(123)
 
     def test_fetch_dataframe(self, data_fetcher, cdp_client_mock):
-        async def get_datapoints_frame(time_series, granularity, start, end):
+        def get_datapoints_frame(time_series, granularity, start, end):
             assert time_series == [{"id": 1234, "aggregate": "avg"}, {"id": 2345, "aggregate": "max"}]
             assert granularity == "1s"
             assert start == 3000
             assert end == 5000
             return pd.DataFrame([[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "ts1", "ts2"])
 
-        async def get_time_series_by_id(*args, **kwargs):
+        def get_time_series_by_id(*args, **kwargs):
             return [
                 {"name": "myts1", "id": 1234},
                 {"name": "myts2", "id": 2345},
@@ -207,13 +203,13 @@ class TestTimeSeries:
         with pytest.raises(InvalidFetchRequest, match="aggregate"):
             data_fetcher.time_series.fetch_dataframe(["ts1", "ts5"])
 
-    def test_fetch_dataframe_column_names_are_aliases(self, data_fetcher, cdp_client_mock, http_mock):
-        async def get_datapoints_frame(*args, **kwargs):
+    def test_fetch_dataframe_column_names_are_aliases(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame(*args, **kwargs):
             return pd.DataFrame(
                 [[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "myts1|average", "myts2|max"]
             )
 
-        async def get_time_series_by_id(*args, **kwargs):
+        def get_time_series_by_id(*args, **kwargs):
             return [
                 {"name": "myts1", "id": 1234},
                 {"name": "myts2", "id": 2345},
@@ -233,7 +229,7 @@ class TestTimeSeries:
             data_fetcher.time_series.fetch_datapoints(123)
 
     def test_fetch_datapoints_single(self, data_fetcher, cdp_client_mock):
-        async def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
+        def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
             assert id == 1234
             assert start == 3000
             assert end == 5000
@@ -252,7 +248,7 @@ class TestTimeSeries:
             data_fetcher.time_series.fetch_datapoints("non-existing-alias")
 
     def test_fetch_datapoints_multiple(self, data_fetcher, cdp_client_mock):
-        async def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
+        def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
             if id == 1234:
                 assert start == 3000
                 assert end == 5000
