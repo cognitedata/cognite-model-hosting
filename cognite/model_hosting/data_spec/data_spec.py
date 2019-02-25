@@ -22,6 +22,11 @@ class _BaseSpec:
     _schema = None  # Set by subclass
 
     def dump(self):
+        """Dumps the data spec into a python data structure.
+
+        Returns:
+            Union[Dict, List]: The data spec as a python data structure.
+        """
         try:
             dumped = self._schema.dump(self)
         except ValidationError as e:
@@ -33,23 +38,49 @@ class _BaseSpec:
         return dumped
 
     def validate(self):
+        """Checks whether or not the data spec is valid.
+
+        Raises:
+            SpecValidationError: If the spec is not valid
+        """
         self.dump()
 
     @classmethod
     def load(cls, data):
+        """Load the data from a python data structure.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+        Returns:
+            The data spec object.
+        """
         try:
             return cls._schema.load(data)
         except ValidationError as e:
             raise SpecValidationError(e.messages) from e
 
     def to_json(self):
+        """Returns a json representation of the data spec.
+
+        Returns:
+            str: The json representation of the data spec.
+        """
         return json.dumps(self.dump(), indent=4, sort_keys=True)
 
     @classmethod
     def from_json(cls, s: str):
+        """Loads the data spec from a json representation.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+
+        Returns:
+            The data spec object.
+        """
         return cls.load(json.loads(s))
 
     def copy(self):
+        """Returns a copy of the data spec."""
         return self.from_json(self.to_json())
 
     def __str__(self):
@@ -116,7 +147,6 @@ class DataSpec(_BaseSpec):
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
         files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
-
     """
 
     def __init__(self, time_series: Dict[str, TimeSeriesSpec] = None, files: Dict[str, FileSpec] = None):
