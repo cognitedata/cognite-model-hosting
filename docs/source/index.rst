@@ -14,8 +14,8 @@ To install this package run the following command
 
    pip install cognite-model-hosting
 
-Introduction
-^^^^^^^^^^^^
+Overview
+^^^^^^^^
 cognite-model-hosting is an open-source library containing utilities for working with data from the Cognite
 Data Platform (CDP) in the Model Hosting environment. Working with the data is split into two parts;
 
