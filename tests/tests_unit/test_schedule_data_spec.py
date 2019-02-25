@@ -5,8 +5,10 @@ import pytest
 from cognite.model_hosting._utils import calculate_windows
 from cognite.model_hosting.data_spec import (
     DataSpec,
+    ScheduleDataSpec,
     ScheduleInputSpec,
     ScheduleInputTimeSeriesSpec,
+    ScheduleOutputSpec,
     TimeSeriesSpec,
 )
 
@@ -36,9 +38,15 @@ class TestCalculateWindowIntervals:
         assert expected_windows == calculate_windows(start, end, stride, window_size, first)
 
 
-def test_get_windowed_data_specs():
+def test_get_instances():
     schedule_ts_spec = {"ts1": ScheduleInputTimeSeriesSpec(id=1), "ts2": ScheduleInputTimeSeriesSpec(id=2)}
-    schedule_data_spec = ScheduleInputSpec(stride="1m", window_size="1m", start=60000, time_series=schedule_ts_spec)
+    schedule_data_spec = ScheduleDataSpec(
+        input=ScheduleInputSpec(time_series=schedule_ts_spec),
+        output=ScheduleOutputSpec(),
+        stride="1m",
+        window_size="1m",
+        start=60000,
+    )
     data_specs = schedule_data_spec.get_instances(start=60000, end=6 * 60000)
 
     expected_data_specs = []
@@ -65,8 +73,14 @@ class TestGetScheduleTimestamps:
 
     @pytest.mark.parametrize("window_size", [1, 2, 3])  # window size shouldn't matter
     @pytest.mark.parametrize("schedule_stride, schedule_start, start, end, expected_timestamp", test_cases)
-    def test_get_schedule_timestamps(
+    def test_get_execution_timestamps(
         self, window_size, schedule_stride, schedule_start, start, end, expected_timestamp
     ):
-        schedule_input_spec = ScheduleInputSpec(stride=schedule_stride, window_size=window_size, start=schedule_start)
-        assert expected_timestamp == schedule_input_spec.get_execution_timestamps(start, end)
+        schedule_data_spec = ScheduleDataSpec(
+            input=ScheduleInputSpec(),
+            output=ScheduleOutputSpec(),
+            stride=schedule_stride,
+            window_size=window_size,
+            start=schedule_start,
+        )
+        assert expected_timestamp == schedule_data_spec.get_execution_timestamps(start, end)

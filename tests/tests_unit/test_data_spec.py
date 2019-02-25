@@ -60,20 +60,13 @@ class TestSpecValidation:
                 "files": {"f1": {"id": 3}, "f2": {"id": 4}},
             },
         ),
-        TestCase(
-            "minimal_schedule_input_spec",
-            ScheduleInputSpec(stride=60000, window_size=120000, start=123),
-            {"stride": 60000, "windowSize": 120000, "start": 123},
-        ),
+        TestCase("minimal_schedule_input_spec", ScheduleInputSpec(), {}),
         TestCase(
             "full_schedule_input_spec",
             ScheduleInputSpec(
-                stride=60000,
-                window_size=120000,
-                start=123,
-                time_series={"ts1": ScheduleInputTimeSeriesSpec(id=6), "ts2": ScheduleInputTimeSeriesSpec(id=7)},
+                time_series={"ts1": ScheduleInputTimeSeriesSpec(id=6), "ts2": ScheduleInputTimeSeriesSpec(id=7)}
             ),
-            {"stride": 60000, "windowSize": 120000, "start": 123, "timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
+            {"timeSeries": {"ts1": {"id": 6}, "ts2": {"id": 7}}},
         ),
         TestCase(
             "schedule_output_time_series_spec",
@@ -93,20 +86,24 @@ class TestSpecValidation:
         ),
         TestCase(
             "minimal_schedule_data_spec",
-            ScheduleDataSpec(input=ScheduleInputSpec(stride=1, window_size=2, start=3), output=ScheduleOutputSpec()),
-            {"input": {"stride": 1, "windowSize": 2, "start": 3}, "output": {}},
+            ScheduleDataSpec(input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=1, window_size=2, start=3),
+            {"input": {}, "output": {}, "stride": 1, "windowSize": 2, "start": 3},
         ),
         TestCase(
             "full_schedule_data_spec",
             ScheduleDataSpec(
-                input=ScheduleInputSpec(
-                    stride=1, window_size=2, start=3, time_series={"ts1": ScheduleInputTimeSeriesSpec(id=5)}
-                ),
+                input=ScheduleInputSpec(time_series={"ts1": ScheduleInputTimeSeriesSpec(id=5)}),
                 output=ScheduleOutputSpec(time_series={"ts1": ScheduleOutputTimeSeriesSpec(id=123, offset=100)}),
+                stride=1,
+                window_size=2,
+                start=3,
             ),
             {
-                "input": {"stride": 1, "windowSize": 2, "start": 3, "timeSeries": {"ts1": {"id": 5}}},
+                "input": {"timeSeries": {"ts1": {"id": 5}}},
                 "output": {"timeSeries": {"ts1": {"id": 123, "offset": 100}}},
+                "stride": 1,
+                "windowSize": 2,
+                "start": 3,
             },
         ),
     ]
@@ -186,17 +183,10 @@ class TestSpecValidation:
             errors={"start": ["Unknown field."], "end": ["Unknown field."]},
         ),
         InvalidTestCase(
-            name="schedule_input_spec_missing_fields",
-            type=ScheduleInputSpec,
+            name="schedule_data_spec_invalid_stride_window_size",
+            type=ScheduleDataSpec,
             constructor=None,
-            primitive={"start": 123},
-            errors={"windowSize": ["Missing data for required field."], "stride": ["Missing data for required field."]},
-        ),
-        InvalidTestCase(
-            name="schedule_input_spec_invalid_stride_window_size",
-            type=ScheduleInputSpec,
-            constructor=None,
-            primitive={"windowSize": 0, "stride": -1, "start": 123},
+            primitive={"input": {}, "output": {}, "windowSize": 0, "stride": -1, "start": 123},
             errors={"stride": ["Must be at least 1."], "windowSize": ["Must be at least 1."]},
         ),
         InvalidTestCase(
@@ -227,8 +217,13 @@ class TestSpecValidation:
             name="schedule_data_spec_missing_fields",
             type=ScheduleDataSpec,
             constructor=None,
-            primitive={},
-            errors={"input": ["Missing data for required field."], "output": ["Missing data for required field."]},
+            primitive={"start": 123},
+            errors={
+                "input": ["Missing data for required field."],
+                "output": ["Missing data for required field."],
+                "windowSize": ["Missing data for required field."],
+                "stride": ["Missing data for required field."],
+            },
         ),
     ]
 
@@ -315,27 +310,45 @@ class TestSpecConstructor:
         ),
         TestCase(
             name="schedule_data_spec_default_start_now",
-            constructor=lambda: ScheduleInputSpec(stride=123, window_size=234),
-            primitive={"stride": 123, "windowSize": 234, "start": 10 ** 9},
+            constructor=lambda: ScheduleDataSpec(
+                input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=123, window_size=234
+            ),
+            primitive={"input": {}, "output": {}, "stride": 123, "windowSize": 234, "start": 10 ** 9},
         ),
         TestCase(
             name="schedule_data_spec_string_formats",
-            constructor=lambda: ScheduleInputSpec(stride="1m", window_size="2m", start="2m-ago"),
-            primitive={"stride": 60000, "windowSize": 120000, "start": 10 ** 9 - 2 * 60 * 1000},
+            constructor=lambda: ScheduleDataSpec(
+                input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride="1m", window_size="2m", start="2m-ago"
+            ),
+            primitive={
+                "input": {},
+                "output": {},
+                "stride": 60000,
+                "windowSize": 120000,
+                "start": 10 ** 9 - 2 * 60 * 1000,
+            },
         ),
         TestCase(
             name="schedule_data_spec_datetime",
-            constructor=lambda: ScheduleInputSpec(
-                stride=timedelta(minutes=1), window_size=timedelta(minutes=2), start=datetime(2018, 1, 1)
+            constructor=lambda: ScheduleDataSpec(
+                input=ScheduleInputSpec(),
+                output=ScheduleOutputSpec(),
+                stride=timedelta(minutes=1),
+                window_size=timedelta(minutes=2),
+                start=datetime(2018, 1, 1),
             ),
-            primitive={"stride": 60000, "windowSize": 120000, "start": 1514764800000},
+            primitive={"input": {}, "output": {}, "stride": 60000, "windowSize": 120000, "start": 1514764800000},
         ),
         TestCase(
             name="schedule_data_spec_datetime",
-            constructor=lambda: ScheduleInputSpec(
-                stride=timedelta(minutes=1), window_size=timedelta(minutes=2), start=datetime(2018, 1, 1)
+            constructor=lambda: ScheduleDataSpec(
+                input=ScheduleInputSpec(),
+                output=ScheduleOutputSpec(),
+                stride=timedelta(minutes=1),
+                window_size=timedelta(minutes=2),
+                start=datetime(2018, 1, 1),
             ),
-            primitive={"stride": 60000, "windowSize": 120000, "start": 1514764800000},
+            primitive={"input": {}, "output": {}, "stride": 60000, "windowSize": 120000, "start": 1514764800000},
         ),
     ]
 
