@@ -114,7 +114,7 @@ class ScheduleInputSpec(_BaseSpec):
         self.start = timestamp_to_ms(start)
         self.time_series = time_series or {}
 
-    def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -137,7 +137,7 @@ class ScheduleInputSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
-    def get_schedule_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(

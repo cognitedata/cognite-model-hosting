@@ -5,10 +5,8 @@ import pytest
 from cognite.model_hosting._utils import calculate_windows
 from cognite.model_hosting.data_spec import (
     DataSpec,
-    ScheduleDataSpec,
     ScheduleInputSpec,
     ScheduleInputTimeSeriesSpec,
-    ScheduleOutputSpec,
     TimeSeriesSpec,
 )
 
@@ -41,7 +39,7 @@ class TestCalculateWindowIntervals:
 def test_get_windowed_data_specs():
     schedule_ts_spec = {"ts1": ScheduleInputTimeSeriesSpec(id=1), "ts2": ScheduleInputTimeSeriesSpec(id=2)}
     schedule_data_spec = ScheduleInputSpec(stride="1m", window_size="1m", start=60000, time_series=schedule_ts_spec)
-    data_specs = schedule_data_spec.get_data_specs(start=60000, end=6 * 60000)
+    data_specs = schedule_data_spec.get_instances(start=60000, end=6 * 60000)
 
     expected_data_specs = []
     for i in range(0, 5 * 60000, 60000):
@@ -71,4 +69,4 @@ class TestGetScheduleTimestamps:
         self, window_size, schedule_stride, schedule_start, start, end, expected_timestamp
     ):
         schedule_input_spec = ScheduleInputSpec(stride=schedule_stride, window_size=window_size, start=schedule_start)
-        assert expected_timestamp == schedule_input_spec.get_schedule_timestamps(start, end)
+        assert expected_timestamp == schedule_input_spec.get_execution_timestamps(start, end)
