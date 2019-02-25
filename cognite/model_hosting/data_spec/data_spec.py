@@ -102,19 +102,39 @@ class DataSpec(_BaseSpec):
 
 
 class ScheduleInputSpec(_BaseSpec):
+    def __init__(self, time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None):
+        self.time_series = time_series or {}
+
+
+class ScheduleOutputTimeSeriesSpec(_BaseSpec):
+    def __init__(self, id: int, offset: Union[int, str, timedelta] = 0):
+        self.id = id
+        self.offset = offset
+
+
+class ScheduleOutputSpec(_BaseSpec):
+    def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
+        self.time_series = time_series
+
+
+class ScheduleDataSpec(_BaseSpec):
     def __init__(
         self,
+        input: ScheduleInputSpec,
+        output: ScheduleOutputSpec,
         stride: Union[int, str, timedelta],
         window_size: Union[int, str, timedelta],
         start: Union[int, str, datetime] = "now",
-        time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None,
     ):
+        self.input = input
+        self.output = output
         self.stride = time_interval_to_ms(stride)
         self.window_size = time_interval_to_ms(window_size)
         self.start = timestamp_to_ms(start)
-        self.time_series = time_series or {}
 
-    def get_data_specs(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+        self.validate()
+
+    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -132,29 +152,19 @@ class ScheduleInputSpec(_BaseSpec):
                     granularity=spec.granularity,
                     include_outside_points=spec.include_outside_points,
                 )
-                for alias, spec in self.time_series.items()
+                for alias, spec in self.input.time_series.items()
             }
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+        start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
-class ScheduleOutputTimeSeriesSpec(_BaseSpec):
-    def __init__(self, id: int, offset: Union[int, str, timedelta] = 0):
-        self.id = id
-        self.offset = offset
+        windows = calculate_windows(
+            start=start, end=end, stride=self.stride, window_size=self.window_size, first=self.start
+        )
 
-
-class ScheduleOutputSpec(_BaseSpec):
-    def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
-        self.time_series = time_series
-
-
-class ScheduleDataSpec(_BaseSpec):
-    def __init__(self, input: ScheduleInputSpec, output: ScheduleOutputSpec):
-        self.input = input
-        self.output = output
-
-        self.validate()
+        return [w[1] for w in windows]
 
 
 class _BaseSchema(Schema):
@@ -230,9 +240,6 @@ class _DataSpecSchema(_BaseSchema):
 class _ScheduleInputDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleInputSpec
 
-    stride = fields.Int(required=True, validate=validate.Range(min=1))
-    windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
-    start = fields.Int(required=True, validate=validate.Range(min=0))
     timeSeries = fields.Dict(
         keys=fields.Str(),
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))),
@@ -261,6 +268,9 @@ class _ScheduleDataSpecSchema(_BaseSchema):
 
     input = fields.Nested(_ScheduleInputDataSpecSchema, required=True)
     output = fields.Nested(_ScheduleOutputDataSpecSchema, required=True)
+    stride = fields.Int(required=True, validate=validate.Range(min=1))
+    windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
+    start = fields.Int(required=True, validate=validate.Range(min=0))
 
 
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
