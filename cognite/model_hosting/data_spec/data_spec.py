@@ -137,6 +137,15 @@ class ScheduleInputSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
+    def get_schedule_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+        start, end = timestamp_to_ms(start), timestamp_to_ms(end)
+
+        windows = calculate_windows(
+            start=start, end=end, stride=self.stride, window_size=self.window_size, first=self.start
+        )
+
+        return [w[1] for w in windows]
+
 
 class ScheduleOutputTimeSeriesSpec(_BaseSpec):
     def __init__(self, id: int, offset: Union[int, str, timedelta] = 0):
