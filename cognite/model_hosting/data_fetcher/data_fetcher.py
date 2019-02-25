@@ -20,20 +20,59 @@ def _execute_tasks_concurrently(func, tasks):
 
 
 class FileFetcher:
+    """An object used for fetching files from CDP.
+
+    This class should never be instantiated directly, but rather accessed through the DataFetcher class
+
+    Examples:
+        Using the FileFetcher::
+
+            from cognite.model_hosting.data_fetcher import DataFetcher
+
+            data_fetcher = DataFetcher(data_spec=...)
+
+            my_file = data_fetcher.files.fetch_to_memory(alias="my_file")
+    """
+
     def __init__(self, file_specs: Dict[str, FileSpec], cdp_client: CdpClient):
         self._file_specs = file_specs
         self._cdp_client = cdp_client
 
     @property
     def aliases(self) -> List[str]:
+        """Returns the file aliases defined in the data spec passed to the data fetcher
+
+        Returns:
+            List[str]: The file aliases defined in the data spec passed to the data fetcher
+        """
         return list(self._file_specs.keys())
 
     def get_spec(self, alias: str) -> FileSpec:
+        """Returns the FileSpec given by the alias
+
+        Args:
+            alias (str): The alias of the file.
+
+        Returns:
+            FileSpec: The file spec given by the alias.
+        """
         if alias not in self.aliases:
             raise InvalidAlias(alias)
         return self._file_specs[alias].copy()
 
     def fetch(self, alias: Union[str, List[str]], directory: str = None) -> None:
+        """Fetches the file given by the provided alias(es) to a given directory.
+
+        If provided, the directory must exist. If not it will default to the current working directory.
+        If a single alias is passed, a pandas DataFrame will be returned. If a list of aliases is passed, a dictionary
+        which maps aliases to DataFrames is returned.
+
+        Args:
+            alias (Union[List[str], str]): The alias(es) to download files for.
+
+        Returns:
+            None
+        """
         directory = directory or os.getcwd()
         if not os.path.isdir(directory):
             raise DirectoryDoesNotExist(directory)
@@ -48,6 +87,17 @@ class FileFetcher:
         _execute_tasks_concurrently(self._download_single_file, tasks)
 
     def fetch_to_memory(self, alias: Union[str, List[str]]) -> Union[bytes, Dict[str, bytes]]:
+        """Fetches the file given by the provided alias(es) to memory.
+
+        If a list of aliases is passed, this method will return a dictionary mapping aliases to their respective file
+        bytes.
+
+        Args:
+            alias (Union[List[str], str]): The alias(es) to download files for.
+
+        Returns:
+            Union[bytes, Dict[str, bytes]]: The files.
+        """
         if isinstance(alias, str):
             return self._download_single_file_to_memory(alias)[alias]
         elif isinstance(alias, list):
@@ -70,15 +120,42 @@ class FileFetcher:
 
 
 class TimeSeriesFetcher:
+    """An object used for fetching time series data from CDP.
+
+        This class should never be instantiated directly, but rather accessed through the DataFetcher class
+
+        Examples:
+            Using the TimeSeriesFetcher::
+
+                from cognite.model_hosting.data_fetcher import DataFetcher
+
+                data_fetcher = DataFetcher(data_spec=...)
+
+                my_datapoints = data_fetcher.time_series.fetch_datapoints(alias="my_ts_1")
+        """
+
     def __init__(self, time_series_specs: Dict[str, TimeSeriesSpec], cdp_client: CdpClient):
         self._specs = time_series_specs
         self._cdp_client = cdp_client
 
     @property
     def aliases(self) -> List:
+        """Returns the time series aliases defined in the data spec passed to the data fetcher
+
+        Returns:
+            List[str]: The time series aliases defined in the data spec passed to the data fetcher
+        """
         return list(self._specs.keys())
 
     def get_spec(self, alias: str) -> TimeSeriesSpec:
+        """Returns the TimeSeriesSpec given by the alias
+
+        Args:
+            alias (str): The alias of the time series.
+
+        Returns:
+            TimeSeriesSpec: The time series spec given by the alias.
+        """
         self._check_valid_alias(alias)
         return self._specs[alias].copy()
 
@@ -132,6 +209,17 @@ class TimeSeriesFetcher:
         return df.rename(columns=name_to_label)
 
     def fetch_dataframe(self, aliases: List[str]) -> pd.DataFrame:
+        """Fetches a time-aligned dataframe of the time series specified by the provided aliases.
+
+        This method requires that all specified aliases must refer to time series with the same granularity, start, and
+        end.
+
+        Args:
+            aliases (List[str]): The list of aliases to retrieve a dataframe for.
+
+        Returns:
+            pandas.DataFrame: A pandas dataframe with the requested data.
+        """
         if type(aliases) != list:
             raise TypeError("Invalid argument type. Aliases should be a list of string")
         self._check_valid_aliases(aliases)
@@ -165,6 +253,17 @@ class TimeSeriesFetcher:
         return data_frames
 
     def fetch_datapoints(self, alias: Union[str, List[str]]) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+        """Fetches dataframes for the time series specified by the aliases.
+
+        If a single alias is passed, a pandas DataFrame will be returned. If a list of aliases is passed, a dictionary
+        which maps aliases to DataFrames is returned.
+
+        Args:
+            alias (Union[List[str], str]): The alias(es) to retrieve data for.
+
+        Returns:
+            Union[pd.DataFrame, Dict[str, pd.DataFrame]: The requested dataframe(s).
+        """
         if type(alias) == str:
             return self._fetch_datapoints_single(alias)
         elif type(alias) == list:
@@ -176,6 +275,16 @@ class TimeSeriesFetcher:
 
 
 class DataFetcher:
+    """Creates an instance of a DataFetcher
+
+    Args:
+        data_spec (DataSpec): The data spec which describes the desired data.
+        api_key (str, optional): API key for authenticating against CDP. Defaults to the value of the environment
+                                variable "COGNITE_API_KEY".
+        project (str, optional): Project. Defaults to project of given API key.
+        base_url (str, optional): Base url to send requests to. Defaults to "https://api.cognitedata.com".
+    """
+
     def __init__(
         self, data_spec: Union[DataSpec, Dict, str], api_key: str = None, project: str = None, base_url: str = None
     ):
@@ -197,12 +306,27 @@ class DataFetcher:
             raise SpecValidationError("data_spec has to be of type DataSpec, dict or str (json).")
 
     def get_data_spec(self):
+        """Returns a copy of the DataSpec passed to the DataFetcher
+
+        Returns:
+            DataSpec: A copy of the DataSpec passed to the DataFetcher
+        """
         return self._data_spec.copy()
 
     @property
     def files(self) -> FileFetcher:
+        """Returns an instance of a FileFetcher
+
+        Returns:
+            FileFetcher: An instance of a FileFetcher
+        """
         return self._files_fetcher
 
     @property
     def time_series(self) -> TimeSeriesFetcher:
+        """Returns an instance of a TimeSeriesFetcher
+
+        Returns:
+            TimeSeriesFetcher: An instance of a TimeSeriesFetcher
+        """
         return self._time_series_fetcher

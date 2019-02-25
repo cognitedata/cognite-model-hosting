@@ -6,13 +6,37 @@
 Cognite Model Hosting Documentation
 ===================================
 
-This package contains utilities for working with data in the Cognite Model Hosting environment.
-
+Installation
+^^^^^^^^^^^^
 To install this package run the following command
 
 .. code-block:: bash
 
    pip install cognite-model-hosting
+
+Introduction
+^^^^^^^^^^^^
+cognite-model-hosting is an open-source library containing utilities for working with data from the Cognite
+Data Platform (CDP) in the Model Hosting environment. Working with the data is split into two parts;
+
+1) Specifying data, such as time series and files, using Data Specs
+2) Fetching the described data using the Data Fetcher.
+
+Data Specs are a collection of classes used to specify data in CDP. These specs are organized in a hierarchical way, so
+that they can be collected in a single object and passed to an instance of a DataFetcher. The Data Fetcher is then used
+to retrieve the specified data from the platform.
+
+Examples
+^^^^^^^^
+.. code-block:: python
+
+   from cognite.model_hosting.data_spec import *
+   from cogntie.model_hosting.data_fetcher import DataFetcher
+
+   # TODO: Create example
+
+
+
 
 .. toctree::
    :maxdepth: 3
