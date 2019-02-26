@@ -271,7 +271,6 @@ class ScheduleDataSpec(_BaseSpec):
 
         self.validate()
 
-
     def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[DataSpec]:
         """Returns the DataSpec objects describing the prediction windows executed between start and end.
 
@@ -305,10 +304,7 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
-
-    def get_execution_timestamps(
-        self, start: Union[int, str, datetime], end: Union[int, str, datetime]
-    ) -> List[int]:
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[int]:
         """Returns a list of timestamps indicating when each prediction will be executed.
 
         This corresponds to the end of each DataSpec returned from get_instances().
