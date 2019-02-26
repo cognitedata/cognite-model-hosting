@@ -126,10 +126,10 @@ class TestTimeSeries:
         return DataFetcher(
             DataSpec(
                 time_series={
-                    "ts1": TimeSeriesSpec(id=1234, start=3000, end=5000, aggregate="avg", granularity="1s"),
+                    "ts1": TimeSeriesSpec(id=1234, start=3000, end=5000, aggregate="average", granularity="1s"),
                     "ts2": TimeSeriesSpec(id=2345, start=3000, end=5000, aggregate="max", granularity="1s"),
                     "ts3": TimeSeriesSpec(id=3456, start=4000, end=9000, aggregate="min", granularity="1s"),
-                    "ts4": TimeSeriesSpec(id=4567, start=3000, end=5000, aggregate="avg", granularity="1m"),
+                    "ts4": TimeSeriesSpec(id=4567, start=3000, end=5000, aggregate="average", granularity="1m"),
                     "ts5": TimeSeriesSpec(id=5678, start=6000, end=8000),
                 }
             )
@@ -160,7 +160,7 @@ class TestTimeSeries:
 
     def test_fetch_dataframe(self, data_fetcher, cdp_client_mock):
         def get_datapoints_frame(time_series, granularity, start, end):
-            assert time_series == [{"id": 1234, "aggregate": "avg"}, {"id": 2345, "aggregate": "max"}]
+            assert time_series == [{"id": 1234, "aggregate": "average"}, {"id": 2345, "aggregate": "max"}]
             assert granularity == "1s"
             assert start == 3000
             assert end == 5000
@@ -233,7 +233,7 @@ class TestTimeSeries:
             assert id == 1234
             assert start == 3000
             assert end == 5000
-            assert aggregate == "avg"
+            assert aggregate == "average"
             assert granularity == "1s"
             assert include_outside_points is None
             return pd.DataFrame([[3000, 1], [4000, 2], [5000, 3]], columns=["timestamp", "value"])
@@ -252,7 +252,7 @@ class TestTimeSeries:
             if id == 1234:
                 assert start == 3000
                 assert end == 5000
-                assert aggregate == "avg"
+                assert aggregate == "average"
                 assert granularity == "1s"
                 assert include_outside_points is None
                 return pd.DataFrame([[3000, 1], [4000, 2], [5000, 3]], columns=["timestamp", "value"])
