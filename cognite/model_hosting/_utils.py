@@ -1,3 +1,4 @@
+import enum
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -129,23 +130,17 @@ def time_offset_to_ms(t: Union[int, str, timedelta]):
         raise TypeError("Time offset `{}` was of type {}, but must be int, str or timedelta,".format(t, type(t)))
 
 
-def get_aggregate_func_return_name(agg_func: str) -> str:
-    agg_funcs = {
-        "avg": "average",
-        "average": "average",
-        "count": "count",
-        "continuousvariance": "continuousvariance",
-        "cv": "continuousvariance",
-        "discretevariance": "discretevariance",
-        "dv": "discretevariance",
-        "int": "interpolation",
-        "interpolation": "interpolation",
-        "max": "max",
-        "min": "min",
-        "step": "stepinterpolation",
-        "stepinterpolation": "stepinterpolation",
-        "sum": "sum",
-        "totalvariation": "totalvariation",
-        "tv": "totalvariation",
-    }
-    return agg_funcs.get(agg_func)
+class AggregateFunction(enum.Enum):
+    AVERAGE = "average"
+    COUNT = "count"
+    CONTINUOUS_VARIANCE = "continuousvariance"
+    DISCRETE_VARIANCE = "discretevariance"
+    INTERPOLATION = "interpolation"
+    MAX = "max"
+    MIN = "min"
+    STEP_INTERPOLATION = "stepinterpolation"
+    TOTAL_VARIATION = "totalvariation"
+
+    @staticmethod
+    def get_functions():
+        return [agg.value for agg in AggregateFunction]

@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 
+from cognite.model_hosting._utils import AggregateFunction
 from cognite.model_hosting.data_spec import (
     DataSpec,
     FileSpec,
@@ -34,13 +35,13 @@ class TestSpecValidation:
         ),
         TestCase(
             "time_series_aggregate",
-            TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m"),
-            {"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
+            TimeSeriesSpec(id=6, start=123, end=234, aggregate="average", granularity="1m"),
+            {"id": 6, "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase(
             "schedule_input_time_series",
-            ScheduleInputTimeSeriesSpec(id=6, aggregate="avg", granularity="1m"),
-            {"id": 6, "aggregate": "avg", "granularity": "1m"},
+            ScheduleInputTimeSeriesSpec(id=6, aggregate="average", granularity="1m"),
+            {"id": 6, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase("empty_data_spec", DataSpec(), {}),
         TestCase(
@@ -137,25 +138,39 @@ class TestSpecValidation:
         InvalidTestCase(
             name="time_series_aggregates_but_not_granularity",
             type=TimeSeriesSpec,
-            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg"),
-            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg"},
+            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="average"),
+            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "average"},
             errors={"granularity": ["granularity must be specified for aggregates."]},
         ),
         InvalidTestCase(
             name="time_series_aggregates_but_include_outside_points",
             type=TimeSeriesSpec,
             constructor=lambda: TimeSeriesSpec(
-                id=6, start=123, end=234, aggregate="avg", granularity="1m", include_outside_points=True
+                id=6, start=123, end=234, aggregate="average", granularity="1m", include_outside_points=True
             ),
             primitive={
                 "id": 6,
                 "start": 123,
                 "end": 234,
-                "aggregate": "avg",
+                "aggregate": "average",
                 "granularity": "1m",
                 "includeOutsidePoints": True,
             },
             errors={"includeOutsidePoints": ["Can't include outside points for aggregates."]},
+        ),
+        InvalidTestCase(
+            name="time_series_invalid_aggregate_function",
+            type=TimeSeriesSpec,
+            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m"),
+            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
+            errors={
+                "aggregate": [
+                    "Not a valid aggregate function. Must be one of: {}.".format(
+                        ", ".join(AggregateFunction.get_functions())
+                    )
+                ],
+                "granularity": ["granularity can only be specified for aggregates."],
+            },
         ),
         InvalidTestCase(
             name="time_series_not_aggregate_but_granularity",

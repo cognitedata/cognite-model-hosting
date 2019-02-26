@@ -14,7 +14,13 @@ from marshmallow import (
     validates_schema,
 )
 
-from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
+from cognite.model_hosting._utils import (
+    AggregateFunction,
+    calculate_windows,
+    granularity_to_ms,
+    time_interval_to_ms,
+    timestamp_to_ms,
+)
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
 
@@ -196,7 +202,11 @@ class _TimeSeriesSpecSchema(_BaseSchema):
     id = fields.Int(required=True)
     start = fields.Int(required=True)
     end = fields.Int(required=True)
-    aggregate = fields.Str()
+    aggregate = fields.Str(
+        validate=validate.OneOf(
+            AggregateFunction.get_functions(), error="Not a valid aggregate function. Must be one of: {choices}."
+        )
+    )
     granularity = fields.Str()
     includeOutsidePoints = fields.Bool(attribute="include_outside_points")
 
