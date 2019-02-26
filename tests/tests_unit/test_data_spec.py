@@ -196,6 +196,30 @@ class TestSpecValidation:
             primitive={"files": {"f1": {}}},
             errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
         ),
+        InvalidTestCase(
+            name="data_spec_invalid_alias",
+            type=DataSpec,
+            constructor=lambda: DataSpec(
+                files={"1f": FileSpec(id=1)}, time_series={"F1": TimeSeriesSpec(id=1, start=0, end=10)}
+            ),
+            primitive={"files": {"1f": {"id": 1}}, "timeSeries": {"F1": {"id": 1, "start": 0, "end": 10}}},
+            errors={
+                "files": {
+                    "1f": {
+                        "key": [
+                            "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter and cannot end with `_` ."
+                        ]
+                    }
+                },
+                "timeSeries": {
+                    "F1": {
+                        "key": [
+                            "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter and cannot end with `_` ."
+                        ]
+                    }
+                },
+            },
+        ),
         # TODO add when Marshmallow fixes inconsistencies (https://github.com/marshmallow-code/marshmallow/issues/1132)
         # InvalidTestCase(
         #     name="schedule_data_spec_nested_errors",
