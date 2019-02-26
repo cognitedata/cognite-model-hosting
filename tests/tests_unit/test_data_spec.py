@@ -1,4 +1,5 @@
 import json
+import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from unittest import mock
@@ -410,3 +411,20 @@ class TestSpecConstructor:
     def test_invalid(self, name, constructor, exception, error_match):
         with pytest.raises(exception, match=error_match):
             constructor()
+
+
+class TestSpecWithTimeAgoFormat:
+    def test_create_multiple_ts_specs_aligned_start_end(self):
+        specs_before = []
+        for i in range(30):
+            specs_before.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
+
+        time.sleep(0.2)
+
+        specs_after = []
+        for i in range(30):
+            specs_after.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
+
+        assert 1 == len(set([(spec.start, spec.end) for spec in specs_before]))
+        assert 1 == len(set([(spec.start, spec.end) for spec in specs_after]))
+        assert 2 == len(set([(spec.start, spec.end) for spec in specs_before + specs_after]))

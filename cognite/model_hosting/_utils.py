@@ -60,9 +60,20 @@ def _datetime_to_ms(dt):
     return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
 
 
+class NowCache:
+    _cached_now = 0
+
+    @classmethod
+    def get_time_now(cls):
+        now = int(round(time.time() * 1000))
+        if now - cls._cached_now > 100:
+            cls._cached_now = now
+        return cls._cached_now
+
+
 def timestamp_to_ms(t: Union[int, str, datetime]):
     """Returns the ms representation of some timestamp given by milliseconds, time-ago format or datetime object"""
-    time_now = int(round(time.time() * 1000))
+    time_now = NowCache.get_time_now()
     if isinstance(t, int):
         ms = t
     elif isinstance(t, str):
