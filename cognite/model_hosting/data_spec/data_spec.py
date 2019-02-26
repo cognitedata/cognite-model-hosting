@@ -134,7 +134,7 @@ class ScheduleDataSpec(_BaseSpec):
 
         self.validate()
 
-    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -157,7 +157,7 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
-    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
