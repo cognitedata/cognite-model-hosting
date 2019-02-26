@@ -381,11 +381,16 @@ class TestSpecConstructor:
 
 class TestSpecWithTimeAgoFormat:
     def test_create_multiple_ts_specs_aligned_start_end(self):
-        specs = []
+        specs_before = []
         for i in range(30):
-            specs.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
-        time.sleep(0.5)
-        for i in range(30):
-            specs.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
+            specs_before.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
 
-        assert 2 == len(set([(spec.start, spec.end) for spec in specs]))
+        time.sleep(0.2)
+
+        specs_after = []
+        for i in range(30):
+            specs_after.append(TimeSeriesSpec(id=i, start="1d-ago", end="now"))
+
+        assert 1 == len(set([(spec.start, spec.end) for spec in specs_before]))
+        assert 1 == len(set([(spec.start, spec.end) for spec in specs_after]))
+        assert 2 == len(set([(spec.start, spec.end) for spec in specs_before + specs_after]))

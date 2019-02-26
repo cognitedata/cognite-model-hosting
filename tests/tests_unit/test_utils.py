@@ -53,10 +53,10 @@ class TestTimestampToMs:
         time_now = timestamp_to_ms("now")
         assert abs(expected_time_now - time_now) < 10
 
-        sleep(0.5)
+        sleep(0.2)
 
         time_now = timestamp_to_ms("now")
-        assert abs(expected_time_now - time_now) > 450
+        assert abs(expected_time_now - time_now) > 190
 
     @pytest.mark.parametrize("t", [-1, datetime(1969, 12, 31), "100000000w-ago"])
     def test_negative(self, t):
