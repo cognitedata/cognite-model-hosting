@@ -5,7 +5,6 @@ from unittest import mock
 
 import pytest
 
-from cognite.model_hosting._utils import AggregateFunction
 from cognite.model_hosting.data_spec import (
     DataSpec,
     FileSpec,
@@ -164,11 +163,7 @@ class TestSpecValidation:
             constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m"),
             primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
             errors={
-                "aggregate": [
-                    "Not a valid aggregate function. Must be one of: {}.".format(
-                        ", ".join(AggregateFunction.get_functions())
-                    )
-                ],
+                "aggregate": ["Not a valid aggregate function. Cannot use shorthand name."],
                 "granularity": ["granularity can only be specified for aggregates."],
             },
         ),

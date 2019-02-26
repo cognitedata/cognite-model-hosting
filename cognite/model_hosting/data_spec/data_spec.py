@@ -14,14 +14,10 @@ from marshmallow import (
     validates_schema,
 )
 
-from cognite.model_hosting._utils import (
-    AggregateFunction,
-    calculate_windows,
-    granularity_to_ms,
-    time_interval_to_ms,
-    timestamp_to_ms,
-)
+from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
+
+INVALID_AGGREGATE_FUNCTIONS = ["avg", "cv", "dv", "int", "step", "tv"]
 
 
 class _BaseSpec:
@@ -203,8 +199,8 @@ class _TimeSeriesSpecSchema(_BaseSchema):
     start = fields.Int(required=True)
     end = fields.Int(required=True)
     aggregate = fields.Str(
-        validate=validate.OneOf(
-            AggregateFunction.get_functions(), error="Not a valid aggregate function. Must be one of: {choices}."
+        validate=validate.NoneOf(
+            INVALID_AGGREGATE_FUNCTIONS, error="Not a valid aggregate function. Cannot use shorthand name."
         )
     )
     granularity = fields.Str()
