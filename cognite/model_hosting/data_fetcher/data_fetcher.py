@@ -61,15 +61,15 @@ class FileFetcher:
         return self._file_specs[alias].copy()
 
     def fetch(self, alias: Union[str, List[str]], directory: str = None) -> None:
-        """Fetches the file given by the provided alias(es) to a given directory.
+        """Fetches the file(s) given by the provided alias(es) to a given directory.
 
-        If provided, the directory must exist. If not, it will default to the current working directory.
+        If provided, the directory must exist. If not provided, it will default to the current working directory.
 
         If a single alias is passed, a pandas DataFrame will be returned. If a list of aliases is passed, a dictionary
         which maps aliases to DataFrames is returned.
 
         Args:
-            alias (Union[List[str], str]): The alias(es) to download files for.
+            alias (Union[List[str], str]): The alias(es) to download file(s) for.
             directory(str, optional): The directory to download the file(s) to.
 
         Returns:
@@ -89,13 +89,13 @@ class FileFetcher:
         _execute_tasks_concurrently(self._download_single_file, tasks)
 
     def fetch_to_memory(self, alias: Union[str, List[str]]) -> Union[bytes, Dict[str, bytes]]:
-        """Fetches the file given by the provided alias(es) to memory.
+        """Fetches the file(s) given by the provided alias(es) to memory.
 
         If a list of aliases is passed, this method will return a dictionary mapping aliases to their respective file
         bytes.
 
         Args:
-            alias (Union[List[str], str]): The alias(es) to download files for.
+            alias (Union[List[str], str]): The alias(es) to download file(s) for.
 
         Returns:
             Union[bytes, Dict[str, bytes]]: The file(s).

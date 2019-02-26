@@ -28,7 +28,7 @@ class _BaseSpec:
             SpecValidationError: If the spec is not valid.
 
         Returns:
-            Union[Dict, List]: The data spec as a Python data structure.
+            Dict: The data spec as a Python data structure.
         """
         try:
             dumped = self._schema.dump(self)
@@ -152,7 +152,7 @@ class DataSpec(_BaseSpec):
     """Creates a DataSpec.
 
     This object collects all data specs specific for a given resource type into a single object which can be passed
-    to the DataFetcher. Here we provide aliases for all specs so that they may be referenced by a user-defined
+    to the DataFetcher. It includes aliases for all specs so that they may be referenced by a user-defined
     shorthand and abstracted away from specific resources.
 
     Args:
@@ -238,9 +238,9 @@ class ScheduleOutputSpec(_BaseSpec):
 class ScheduleDataSpec(_BaseSpec):
     """Creates a ScheduleDataSpec.
 
-    This spec defines the input and output time series for a given schedule, as well as how the hosting environment
-    should feed the specified time series data to your model. This is done by specifying window size, a stride, and
-    start time for you schedule.
+    This spec defines the input and output data for a given schedule, as well as how the hosting environment should
+    feed the specified data to your model. This is done by specifying window size, a stride, and start time
+    for the schedule.
 
     Args:
         input (ScheduleInputSpec): A schedule input spec describing input for a model.

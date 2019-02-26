@@ -27,7 +27,7 @@ class DataFetcherHttpError(Exception):
 
 
 class ApiKeyError(Exception):
-    """Raised if your api key is missing or invalid."""
+    """Raised if the provided API key is missing or invalid."""
 
     pass
 
@@ -45,7 +45,8 @@ class DirectoryDoesNotExist(Exception):
 class InvalidFetchRequest(Exception):
     """Raised if an invalid fetch request is issued.
 
-    For example if you ask for a time-aligned dataframe when the specified starts/ends or granularities do not match.
+    For example if a request is issued for a time-aligned dataframe where the specified starts/ends or granularities
+    of the time series are not the same.
     """
 
     pass
