@@ -2,7 +2,7 @@ import json
 
 
 class SpecValidationError(Exception):
-    """Raised if a data specs is invalid.
+    """Raised if a data spec is invalid.
 
     Args:
         errors (Dict): A dictionary describing which fields are invalid and why.

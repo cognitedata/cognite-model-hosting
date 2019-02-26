@@ -63,12 +63,14 @@ class FileFetcher:
     def fetch(self, alias: Union[str, List[str]], directory: str = None) -> None:
         """Fetches the file given by the provided alias(es) to a given directory.
 
-        If provided, the directory must exist. If not it will default to the current working directory.
+        If provided, the directory must exist. If not, it will default to the current working directory.
+
         If a single alias is passed, a pandas DataFrame will be returned. If a list of aliases is passed, a dictionary
         which maps aliases to DataFrames is returned.
 
         Args:
             alias (Union[List[str], str]): The alias(es) to download files for.
+            directory(str, optional): The directory to download the file(s) to.
 
         Returns:
             None
@@ -96,7 +98,7 @@ class FileFetcher:
             alias (Union[List[str], str]): The alias(es) to download files for.
 
         Returns:
-            Union[bytes, Dict[str, bytes]]: The files.
+            Union[bytes, Dict[str, bytes]]: The file(s).
         """
         if isinstance(alias, str):
             return self._download_single_file_to_memory(alias)[alias]
@@ -211,8 +213,8 @@ class TimeSeriesFetcher:
     def fetch_dataframe(self, aliases: List[str]) -> pd.DataFrame:
         """Fetches a time-aligned dataframe of the time series specified by the provided aliases.
 
-        This method requires that all specified aliases must refer to time series with the same granularity, start, and
-        end.
+        This method requires that all specified aliases must refer to time series aggregates with the same granularity,
+        start, and end.
 
         Args:
             aliases (List[str]): The list of aliases to retrieve a dataframe for.
@@ -275,7 +277,7 @@ class TimeSeriesFetcher:
 
 
 class DataFetcher:
-    """Creates an instance of a DataFetcher
+    """Creates an instance of DataFetcher
 
     Args:
         data_spec (DataSpec): The data spec which describes the desired data.
@@ -315,18 +317,18 @@ class DataFetcher:
 
     @property
     def files(self) -> FileFetcher:
-        """Returns an instance of a FileFetcher
+        """Returns an instance of FileFetcher
 
         Returns:
-            FileFetcher: An instance of a FileFetcher
+            FileFetcher: An instance of FileFetcher
         """
         return self._files_fetcher
 
     @property
     def time_series(self) -> TimeSeriesFetcher:
-        """Returns an instance of a TimeSeriesFetcher
+        """Returns an instance of TimeSeriesFetcher
 
         Returns:
-            TimeSeriesFetcher: An instance of a TimeSeriesFetcher
+            TimeSeriesFetcher: An instance of TimeSeriesFetcher
         """
         return self._time_series_fetcher

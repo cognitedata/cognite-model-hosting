@@ -23,20 +23,26 @@ Data Platform (CDP) in the Model Hosting environment. Working with the data is s
 2) Fetching the described data using the Data Fetcher.
 
 Data Specs are a collection of classes used to specify data in CDP. These specs are organized in a hierarchical way, so
-that they can be collected in a single object and passed to an instance of a DataFetcher. The Data Fetcher is then used
-to retrieve the specified data from the platform.
+that they can be collected in a single object, sent easily around and passed to an instance of a DataFetcher. The Data
+Fetcher is then used to retrieve the specified data from the platform.
 
 Examples
 ^^^^^^^^
 .. code-block:: python
 
+   from cognite.model_hosting.data_fetcher import DataFetcher
    from cognite.model_hosting.data_spec import *
-   from cogntie.model_hosting.data_fetcher import DataFetcher
 
-   # TODO: Create example
+   id1 = ...
+   id2 = ...
+   ts1 = TimeSeriesSpec(id=id1, start="3d-ago", end="now", granularity="1d", aggregate="average")
+   ts2 = TimeSeriesSpec(id=id2, start="3d-ago", end="now", granularity="1d", aggregate="max")
+   ds = DataSpec({"myts1": ts1, "myts2": ts2})
+   print(ds)
 
-
-
+   data_fetcher = DataFetcher(ds)
+   df = data_fetcher.time_series.fetch_dataframe(["myts1", "myts2"])
+   print(df)
 
 .. toctree::
    :maxdepth: 3

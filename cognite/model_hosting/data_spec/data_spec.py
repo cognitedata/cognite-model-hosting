@@ -22,10 +22,13 @@ class _BaseSpec:
     _schema = None  # Set by subclass
 
     def dump(self):
-        """Dumps the data spec into a python data structure.
+        """Dumps the data spec into a Python data structure.
+
+        Raises:
+            SpecValidationError: If the spec is not valid
 
         Returns:
-            Union[Dict, List]: The data spec as a python data structure.
+            Union[Dict, List]: The data spec as a Python data structure.
         """
         try:
             dumped = self._schema.dump(self)
@@ -47,10 +50,11 @@ class _BaseSpec:
 
     @classmethod
     def load(cls, data):
-        """Load the data from a python data structure.
+        """Load the data from a Python data structure.
 
         Raises:
             SpecValidationError: If the spec is not valid.
+
         Returns:
             The data spec object.
         """
@@ -61,6 +65,9 @@ class _BaseSpec:
 
     def to_json(self):
         """Returns a json representation of the data spec.
+
+        Raises:
+            SpecValidationError: If the spec is not valid
 
         Returns:
             str: The json representation of the data spec.
@@ -80,7 +87,11 @@ class _BaseSpec:
         return cls.load(json.loads(s))
 
     def copy(self):
-        """Returns a copy of the data spec."""
+        """Returns a copy of the data spec.
+
+        Raises:
+            SpecValidationError: If the spec is not valid
+        """
         return self.from_json(self.to_json())
 
     def __str__(self):
@@ -100,9 +111,9 @@ class TimeSeriesSpec(_BaseSpec):
 
     Args:
         id (int): The id of the time series
-        start (Union[str, int, datetime]): The start of the time series. Can be either milliseconds since epoch,
+        start (Union[str, int, datetime]): The (inclusive) start of the time series. Can be either milliseconds since epoch,
         time-ago format (e.g. "1d-ago"), or a datetime object.
-        end (Union[str, int, datetime]): The end of the time series. Same format as start. Can also be set to "now".
+        end (Union[str, int, datetime]): The (exclusive) end of the time series. Same format as start. Can also be set to "now".
         aggregate (str, optional): The aggregate function to apply to the time series
         granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
         include_outside_points (bool): Whether or not to include the first point before and after start and end. Can
@@ -142,7 +153,7 @@ class DataSpec(_BaseSpec):
 
     This object collects all data specs specific for a given resource type into a single object which can be passed
     to the DataFetcher. Here we provide aliases for all specs so that they may be referenced by a user-defined
-    shorthand.
+    shorthand and abstracted away from specific resources.
 
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
@@ -234,11 +245,11 @@ class ScheduleDataSpec(_BaseSpec):
     Args:
         input (ScheduleInputSpec): A schedule input spec describing input for a model.
         output (ScheduleOutputSpec): A schedule output spec describing output for a model.
-        stride (Union[int, str, timedelta]): The gap between the start of each prediction window. Can be either
-                                            milliseconds, a timedelta object, or a time-string (e.g. "1h", "10d", "120s")
-        window_size (Union[int, str, timedelta]): The size of each prediction window. Same format as stride.
-        start (Union[int, str, datetime]): When to start the schedule. This corresponds to the end of the first
-                                            prediction window.
+        stride (Union[int, str, timedelta]): The interval at which predictions will be made. Can be either
+            milliseconds, a timedelta object, or a time-string (e.g. "1h", "10d", "120s")
+        window_size (Union[int, str, timedelta]): The size of each prediction window, i.e. how long back in time a
+            prediction will look. Same format as stride.
+        start (Union[int, str, datetime]): When the first prediction will be made.
     """
 
     def __init__(
@@ -258,12 +269,12 @@ class ScheduleDataSpec(_BaseSpec):
         self.validate()
 
     def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]) -> List[DataSpec]:
-        """Returns the DataSpec objects describing each prediction window between start and end.
+        """Returns the DataSpec objects describing the prediction windows executed between start and end.
 
         Args:
-            start (Union[str, int, datetime]): The start of the time series. Can be either milliseconds since epoch,
-                    time-ago format (e.g. "1d-ago"), or a datetime object.
-            end (Union[str, int, datetime]): The end of the time series. Same format as start. Can also be set to "now".
+            start (Union[str, int, datetime]): The start of the time period. Can be either milliseconds since epoch,
+                time-ago format (e.g. "1d-ago"), or a datetime object.
+            end (Union[str, int, datetime]): The end of the time period. Same format as start. Can also be set to "now".
 
         Returns:
             List[DataSpec]: List of DataSpec objects, one for each prediction window.
@@ -293,14 +304,14 @@ class ScheduleDataSpec(_BaseSpec):
     def get_execution_timestamps(
         self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]
     ) -> List[int]:
-        """Returns a list of timestamps indicating when each schedule window will be executed.
+        """Returns a list of timestamps indicating when each prediction will be executed.
 
         This corresponds to the end of each DataSpec returned from get_instances().
 
         Args:
-            start (Union[str, int, datetime]): The start of the time series. Can be either milliseconds since epoch,
+            start (Union[str, int, datetime]): The start of the time period. Can be either milliseconds since epoch,
                     time-ago format (e.g. "1d-ago"), or a datetime object.
-            end (Union[str, int, datetime]): The end of the time series. Same format as start. Can also be set to "now".
+            end (Union[str, int, datetime]): The end of the time period. Same format as start. Can also be set to "now".
 
         Returns:
             List[int]: A list of timestamps.
