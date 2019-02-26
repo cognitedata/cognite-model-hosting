@@ -5,8 +5,8 @@ class DataFetcherHttpError(Exception):
     """Raised if an HTTP Error occurred while processing your request.
 
     Args:
-        message (str):  The error message produced by the API
-        code (int):     The error code produced by the failure
+        message (str):  The error message produced by the API.
+        code (int):     The error code produced by the failure.
         x_request_id (str): The request-id generated for the failed request.
         extra (Dict):   A dict of any additional information.
     """
@@ -27,7 +27,7 @@ class DataFetcherHttpError(Exception):
 
 
 class ApiKeyError(Exception):
-    """Raised if your api key is missing or invalid"""
+    """Raised if your api key is missing or invalid."""
 
     pass
 

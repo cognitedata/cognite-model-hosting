@@ -22,7 +22,7 @@ def _execute_tasks_concurrently(func, tasks):
 class FileFetcher:
     """An object used for fetching files from CDP.
 
-    This class should never be instantiated directly, but rather accessed through the DataFetcher class
+    This class should never be instantiated directly, but rather accessed through the DataFetcher class.
 
     Examples:
         Using the FileFetcher::
@@ -40,10 +40,10 @@ class FileFetcher:
 
     @property
     def aliases(self) -> List[str]:
-        """Returns the file aliases defined in the data spec passed to the data fetcher
+        """Returns the file aliases defined in the data spec passed to the data fetcher.
 
         Returns:
-            List[str]: The file aliases defined in the data spec passed to the data fetcher
+            List[str]: The file aliases defined in the data spec passed to the data fetcher.
         """
         return list(self._file_specs.keys())
 
@@ -124,7 +124,7 @@ class FileFetcher:
 class TimeSeriesFetcher:
     """An object used for fetching time series data from CDP.
 
-        This class should never be instantiated directly, but rather accessed through the DataFetcher class
+        This class should never be instantiated directly, but rather accessed through the DataFetcher class.
 
         Examples:
             Using the TimeSeriesFetcher::
@@ -142,15 +142,15 @@ class TimeSeriesFetcher:
 
     @property
     def aliases(self) -> List:
-        """Returns the time series aliases defined in the data spec passed to the data fetcher
+        """Returns the time series aliases defined in the data spec passed to the data fetcher.
 
         Returns:
-            List[str]: The time series aliases defined in the data spec passed to the data fetcher
+            List[str]: The time series aliases defined in the data spec passed to the data fetcher.
         """
         return list(self._specs.keys())
 
     def get_spec(self, alias: str) -> TimeSeriesSpec:
-        """Returns the TimeSeriesSpec given by the alias
+        """Returns the TimeSeriesSpec given by the alias.
 
         Args:
             alias (str): The alias of the time series.
@@ -277,7 +277,7 @@ class TimeSeriesFetcher:
 
 
 class DataFetcher:
-    """Creates an instance of DataFetcher
+    """Creates an instance of DataFetcher.
 
     Args:
         data_spec (DataSpec): The data spec which describes the desired data.
@@ -308,27 +308,27 @@ class DataFetcher:
             raise SpecValidationError("data_spec has to be of type DataSpec, dict or str (json).")
 
     def get_data_spec(self):
-        """Returns a copy of the DataSpec passed to the DataFetcher
+        """Returns a copy of the DataSpec passed to the DataFetcher.
 
         Returns:
-            DataSpec: A copy of the DataSpec passed to the DataFetcher
+            DataSpec: A copy of the DataSpec passed to the DataFetcher.
         """
         return self._data_spec.copy()
 
     @property
     def files(self) -> FileFetcher:
-        """Returns an instance of FileFetcher
+        """Returns an instance of FileFetcher.
 
         Returns:
-            FileFetcher: An instance of FileFetcher
+            FileFetcher: An instance of FileFetcher.
         """
         return self._files_fetcher
 
     @property
     def time_series(self) -> TimeSeriesFetcher:
-        """Returns an instance of TimeSeriesFetcher
+        """Returns an instance of TimeSeriesFetcher.
 
         Returns:
-            TimeSeriesFetcher: An instance of TimeSeriesFetcher
+            TimeSeriesFetcher: An instance of TimeSeriesFetcher.
         """
         return self._time_series_fetcher

@@ -25,7 +25,7 @@ class _BaseSpec:
         """Dumps the data spec into a Python data structure.
 
         Raises:
-            SpecValidationError: If the spec is not valid
+            SpecValidationError: If the spec is not valid.
 
         Returns:
             Union[Dict, List]: The data spec as a Python data structure.
@@ -44,7 +44,7 @@ class _BaseSpec:
         """Checks whether or not the data spec is valid.
 
         Raises:
-            SpecValidationError: If the spec is not valid
+            SpecValidationError: If the spec is not valid.
         """
         self.dump()
 
@@ -67,7 +67,7 @@ class _BaseSpec:
         """Returns a json representation of the data spec.
 
         Raises:
-            SpecValidationError: If the spec is not valid
+            SpecValidationError: If the spec is not valid.
 
         Returns:
             str: The json representation of the data spec.
@@ -90,7 +90,7 @@ class _BaseSpec:
         """Returns a copy of the data spec.
 
         Raises:
-            SpecValidationError: If the spec is not valid
+            SpecValidationError: If the spec is not valid.
         """
         return self.from_json(self.to_json())
 
@@ -110,11 +110,11 @@ class TimeSeriesSpec(_BaseSpec):
     If the granularity and aggregate parameters are omitted, the TimeSeriesSpec specifies raw data.
 
     Args:
-        id (int): The id of the time series
+        id (int): The id of the time series.
         start (Union[str, int, datetime]): The (inclusive) start of the time series. Can be either milliseconds since epoch,
         time-ago format (e.g. "1d-ago"), or a datetime object.
         end (Union[str, int, datetime]): The (exclusive) end of the time series. Same format as start. Can also be set to "now".
-        aggregate (str, optional): The aggregate function to apply to the time series
+        aggregate (str, optional): The aggregate function to apply to the time series.
         granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
         include_outside_points (bool): Whether or not to include the first point before and after start and end. Can
                                         only be used with raw data.
@@ -168,14 +168,14 @@ class DataSpec(_BaseSpec):
 
 
 class ScheduleInputTimeSeriesSpec(_BaseSpec):
-    """Creates a ScheduleOutputTimeSeriesSpec
+    """Creates a ScheduleOutputTimeSeriesSpec.
 
     This object defines the time series a schedule on a given model should read from.
 
     If the granularity and aggregate parameters are omitted, the spec specifies raw data.
 
     Args:
-        id (int): The id of the output time series
+        id (int): The id of the output time series.
         aggregate (str, optional): The aggregate function to apply to the time series.
         granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
         include_outside_points (bool, optional): Whether or not to include the first point before and after start and
@@ -190,13 +190,13 @@ class ScheduleInputTimeSeriesSpec(_BaseSpec):
 
 
 class ScheduleInputSpec(_BaseSpec):
-    """Creates a ScheduleInputSpec
+    """Creates a ScheduleInputSpec.
 
     The provided aliases must be the same as the input fields defined on the model.
 
     Args:
         time_series (Dict[str, ScheduleInputTimeSeriesSpec]): A dictionary mapping aliases to
-            ScheduleInputTimeSeriesSpec objects
+            ScheduleInputTimeSeriesSpec objects.
     """
 
     def __init__(self, time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None):
@@ -204,14 +204,14 @@ class ScheduleInputSpec(_BaseSpec):
 
 
 class ScheduleOutputTimeSeriesSpec(_BaseSpec):
-    """Creates a ScheduleOutputTimeSeriesSpec
+    """Creates a ScheduleOutputTimeSeriesSpec.
 
     This object defines the time series a schedule on a given model should write to. You need to specify an offset which
     defines where in time your schedule can write data to for a given window. Offset defaults to 0, meaning that your
     schedule can write to the same time window which it was feeded data from.
 
     Args:
-        id (int): The id of the output time series
+        id (int): The id of the output time series.
         offset (Union[int, str, timedelta], optional): The offset of the window to which yoru schedule is allowed to
             write data.
     """
@@ -222,13 +222,13 @@ class ScheduleOutputTimeSeriesSpec(_BaseSpec):
 
 
 class ScheduleOutputSpec(_BaseSpec):
-    """Creates a ScheduleOutputSpec
+    """Creates a ScheduleOutputSpec.
 
     The provided aliases must be the same as the output fields defined on the model.
 
     Args:
         time_series (Dict[str, ScheduleInputTimeSeriesSpec]): A dictionary mapping aliases to
-            ScheduleOutputTimeSeriesSpec objects
+            ScheduleOutputTimeSeriesSpec objects.
     """
 
     def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
@@ -236,7 +236,7 @@ class ScheduleOutputSpec(_BaseSpec):
 
 
 class ScheduleDataSpec(_BaseSpec):
-    """Creates a ScheduleDataSpec
+    """Creates a ScheduleDataSpec.
 
     This spec defines the input and output time series for a given schedule, as well as how the hosting environment
     should feed the specified time series data to your model. This is done by specifying window size, a stride, and
@@ -246,7 +246,7 @@ class ScheduleDataSpec(_BaseSpec):
         input (ScheduleInputSpec): A schedule input spec describing input for a model.
         output (ScheduleOutputSpec): A schedule output spec describing output for a model.
         stride (Union[int, str, timedelta]): The interval at which predictions will be made. Can be either
-            milliseconds, a timedelta object, or a time-string (e.g. "1h", "10d", "120s")
+            milliseconds, a timedelta object, or a time-string (e.g. "1h", "10d", "120s").
         window_size (Union[int, str, timedelta]): The size of each prediction window, i.e. how long back in time a
             prediction will look. Same format as stride.
         start (Union[int, str, datetime]): When the first prediction will be made.
