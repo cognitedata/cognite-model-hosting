@@ -63,6 +63,18 @@ class TestTimestampToMs:
         with pytest.raises(ValueError, match="negative"):
             timestamp_to_ms(t)
 
+    def test_now_cache_sleep_under_threshold(self):
+        t1 = timestamp_to_ms("1d-ago")
+        sleep(0.003)
+        t2 = timestamp_to_ms("1d-ago")
+        assert t2 == t1
+
+    def test_now_cache_sleep_past_threshold(self):
+        t1 = timestamp_to_ms("1d-ago")
+        sleep(0.015)
+        t2 = timestamp_to_ms("1d-ago")
+        assert t2 > t1
+
 
 class TestTimeIntervalToMs:
     @pytest.mark.parametrize("t", [None, 1.23, [], {}])
