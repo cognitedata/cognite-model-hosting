@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
@@ -16,6 +17,8 @@ from marshmallow import (
 
 from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
+
+INVALID_AGGREGATE_FUNCTIONS = ["avg", "cv", "dv", "int", "step", "tv"]
 
 
 class _BaseSpec:
@@ -134,7 +137,7 @@ class ScheduleDataSpec(_BaseSpec):
 
         self.validate()
 
-    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -157,7 +160,7 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
-    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime, None]):
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -190,13 +193,30 @@ class _BaseSchema(Schema):
         return self._spec(**data)
 
 
+class AliasField(fields.String):
+    def __init__(self):
+        super().__init__(required=True, validate=self.__validate)
+
+    def __validate(self, field_name):
+        pattern = "[a-z]([a-z0-9_]{0,48}[a-z0-9])?"
+        if not re.fullmatch(pattern, field_name):
+            raise ValidationError(
+                "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter "
+                "and cannot end with `_` ."
+            )
+
+
 class _TimeSeriesSpecSchema(_BaseSchema):
     _default_spec = TimeSeriesSpec
 
     id = fields.Int(required=True)
     start = fields.Int(required=True)
     end = fields.Int(required=True)
-    aggregate = fields.Str()
+    aggregate = fields.Str(
+        validate=validate.NoneOf(
+            INVALID_AGGREGATE_FUNCTIONS, error="Not a valid aggregate function. Cannot use shorthand name."
+        )
+    )
     granularity = fields.Str()
     includeOutsidePoints = fields.Bool(attribute="include_outside_points")
 
@@ -233,15 +253,15 @@ class _FileSpecSchema(_BaseSchema):
 class _DataSpecSchema(_BaseSchema):
     _default_spec = DataSpec
 
-    timeSeries = fields.Dict(keys=fields.Str(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
-    files = fields.Dict(keys=fields.Str(), values=fields.Nested(_FileSpecSchema))
+    timeSeries = fields.Dict(keys=AliasField(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
+    files = fields.Dict(keys=AliasField(), values=fields.Nested(_FileSpecSchema))
 
 
 class _ScheduleInputDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleInputSpec
 
     timeSeries = fields.Dict(
-        keys=fields.Str(),
+        keys=AliasField(),
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
@@ -258,7 +278,7 @@ class _ScheduleOutputDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleOutputSpec
 
     timeSeries = fields.Dict(
-        keys=fields.Str(), values=fields.Nested(_ScheduleOutputTimeSeriesSpecSchema), attribute="time_series"
+        keys=AliasField(), values=fields.Nested(_ScheduleOutputTimeSeriesSpecSchema), attribute="time_series"
     )
 
 

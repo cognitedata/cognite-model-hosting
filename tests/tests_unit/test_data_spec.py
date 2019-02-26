@@ -35,13 +35,13 @@ class TestSpecValidation:
         ),
         TestCase(
             "time_series_aggregate",
-            TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m"),
-            {"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
+            TimeSeriesSpec(id=6, start=123, end=234, aggregate="average", granularity="1m"),
+            {"id": 6, "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase(
             "schedule_input_time_series",
-            ScheduleInputTimeSeriesSpec(id=6, aggregate="avg", granularity="1m"),
-            {"id": 6, "aggregate": "avg", "granularity": "1m"},
+            ScheduleInputTimeSeriesSpec(id=6, aggregate="average", granularity="1m"),
+            {"id": 6, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase("empty_data_spec", DataSpec(), {}),
         TestCase(
@@ -138,25 +138,35 @@ class TestSpecValidation:
         InvalidTestCase(
             name="time_series_aggregates_but_not_granularity",
             type=TimeSeriesSpec,
-            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg"),
-            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg"},
+            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="average"),
+            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "average"},
             errors={"granularity": ["granularity must be specified for aggregates."]},
         ),
         InvalidTestCase(
             name="time_series_aggregates_but_include_outside_points",
             type=TimeSeriesSpec,
             constructor=lambda: TimeSeriesSpec(
-                id=6, start=123, end=234, aggregate="avg", granularity="1m", include_outside_points=True
+                id=6, start=123, end=234, aggregate="average", granularity="1m", include_outside_points=True
             ),
             primitive={
                 "id": 6,
                 "start": 123,
                 "end": 234,
-                "aggregate": "avg",
+                "aggregate": "average",
                 "granularity": "1m",
                 "includeOutsidePoints": True,
             },
             errors={"includeOutsidePoints": ["Can't include outside points for aggregates."]},
+        ),
+        InvalidTestCase(
+            name="time_series_invalid_aggregate_function",
+            type=TimeSeriesSpec,
+            constructor=lambda: TimeSeriesSpec(id=6, start=123, end=234, aggregate="avg", granularity="1m"),
+            primitive={"id": 6, "start": 123, "end": 234, "aggregate": "avg", "granularity": "1m"},
+            errors={
+                "aggregate": ["Not a valid aggregate function. Cannot use shorthand name."],
+                "granularity": ["granularity can only be specified for aggregates."],
+            },
         ),
         InvalidTestCase(
             name="time_series_not_aggregate_but_granularity",
@@ -196,6 +206,30 @@ class TestSpecValidation:
             constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
             primitive={"files": {"f1": {}}},
             errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
+        ),
+        InvalidTestCase(
+            name="data_spec_invalid_alias",
+            type=DataSpec,
+            constructor=lambda: DataSpec(
+                files={"1f": FileSpec(id=1)}, time_series={"F1": TimeSeriesSpec(id=1, start=0, end=10)}
+            ),
+            primitive={"files": {"1f": {"id": 1}}, "timeSeries": {"F1": {"id": 1, "start": 0, "end": 10}}},
+            errors={
+                "files": {
+                    "1f": {
+                        "key": [
+                            "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter and cannot end with `_` ."
+                        ]
+                    }
+                },
+                "timeSeries": {
+                    "F1": {
+                        "key": [
+                            "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter and cannot end with `_` ."
+                        ]
+                    }
+                },
+            },
         ),
         # TODO add when Marshmallow fixes inconsistencies (https://github.com/marshmallow-code/marshmallow/issues/1132)
         # InvalidTestCase(
