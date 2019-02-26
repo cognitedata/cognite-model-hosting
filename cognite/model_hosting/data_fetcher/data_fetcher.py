@@ -4,7 +4,6 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from cognite.model_hosting._utils import get_aggregate_func_return_name
 from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
 from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
@@ -204,8 +203,7 @@ class TimeSeriesFetcher:
         ts_names = {ts["id"]: ts["name"] for ts in time_series}
         for alias, ts_spec in self._specs.items():
             if ts_spec.aggregate:
-                agg_return_name = get_aggregate_func_return_name(ts_spec.aggregate)
-                name_to_label[ts_names[ts_spec.id] + "|" + agg_return_name] = alias
+                name_to_label[ts_names[ts_spec.id] + "|" + ts_spec.aggregate] = alias
             else:
                 name_to_label[ts_names[ts_spec.id]] = alias
         return df.rename(columns=name_to_label)
