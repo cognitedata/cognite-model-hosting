@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
@@ -192,6 +193,19 @@ class _BaseSchema(Schema):
         return self._spec(**data)
 
 
+class AliasField(fields.String):
+    def __init__(self):
+        super().__init__(required=True, validate=self.__validate)
+
+    def __validate(self, field_name):
+        pattern = "[a-z]([a-z0-9_]{0,48}[a-z0-9])?"
+        if not re.fullmatch(pattern, field_name):
+            raise ValidationError(
+                "Invalid alias. Must be 1 to 50 lowercase alphanumeric characters or `_`. Must start with a letter "
+                "and cannot end with `_` ."
+            )
+
+
 class _TimeSeriesSpecSchema(_BaseSchema):
     _default_spec = TimeSeriesSpec
 
@@ -239,15 +253,15 @@ class _FileSpecSchema(_BaseSchema):
 class _DataSpecSchema(_BaseSchema):
     _default_spec = DataSpec
 
-    timeSeries = fields.Dict(keys=fields.Str(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
-    files = fields.Dict(keys=fields.Str(), values=fields.Nested(_FileSpecSchema))
+    timeSeries = fields.Dict(keys=AliasField(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
+    files = fields.Dict(keys=AliasField(), values=fields.Nested(_FileSpecSchema))
 
 
 class _ScheduleInputDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleInputSpec
 
     timeSeries = fields.Dict(
-        keys=fields.Str(),
+        keys=AliasField(),
         values=fields.Nested(_TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))),
         attribute="time_series",
     )
@@ -264,7 +278,7 @@ class _ScheduleOutputDataSpecSchema(_BaseSchema):
     _default_spec = ScheduleOutputSpec
 
     timeSeries = fields.Dict(
-        keys=fields.Str(), values=fields.Nested(_ScheduleOutputTimeSeriesSpecSchema), attribute="time_series"
+        keys=AliasField(), values=fields.Nested(_ScheduleOutputTimeSeriesSpecSchema), attribute="time_series"
     )
 
 
