@@ -53,25 +53,27 @@ class TestTimestampToMs:
         time_now = timestamp_to_ms("now")
         assert abs(expected_time_now - time_now) < 10
 
-        sleep(0.1)
+        sleep(0.5)
 
         time_now = timestamp_to_ms("now")
-        assert abs(expected_time_now - time_now) > 90
+        assert abs(expected_time_now - time_now) > 450
 
     @pytest.mark.parametrize("t", [-1, datetime(1969, 12, 31), "100000000w-ago"])
     def test_negative(self, t):
         with pytest.raises(ValueError, match="negative"):
             timestamp_to_ms(t)
 
-    def test_now_cache_sleep_under_threshold(self):
+    @mock.patch("cognite.model_hosting._utils.time.time")
+    def test_now_cache_diff_under_threshold(self, time_mock):
+        time_mock.side_effect = [10 ** 9, 10 ** 9 + 0.099]
         t1 = timestamp_to_ms("1d-ago")
-        sleep(0.003)
         t2 = timestamp_to_ms("1d-ago")
-        assert t2 == t1
+        assert t1 == t2
 
-    def test_now_cache_sleep_past_threshold(self):
+    @mock.patch("cognite.model_hosting._utils.time.time")
+    def test_now_cache_diff_over_threshold(self, time_mock):
+        time_mock.side_effect = [10 ** 9, 10 ** 9 + 0.101]
         t1 = timestamp_to_ms("1d-ago")
-        sleep(0.015)
         t2 = timestamp_to_ms("1d-ago")
         assert t2 > t1
 

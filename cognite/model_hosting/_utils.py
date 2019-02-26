@@ -65,7 +65,7 @@ class NowCache:
     @classmethod
     def get_time_now(cls):
         now = int(round(time.time() * 1000))
-        if abs(now - cls._cached_now) > 10:
+        if now - cls._cached_now > 100:
             cls._cached_now = now
         return cls._cached_now
 
