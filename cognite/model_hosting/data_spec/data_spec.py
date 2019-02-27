@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime, timedelta
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 from marshmallow import (
     RAISE,
@@ -25,6 +25,14 @@ class _BaseSpec:
     _schema = None  # Set by subclass
 
     def dump(self):
+        """Dumps the data spec into a Python data structure.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+
+        Returns:
+            Dict: The data spec as a Python data structure.
+        """
         try:
             dumped = self._schema.dump(self)
         except ValidationError as e:
@@ -36,23 +44,57 @@ class _BaseSpec:
         return dumped
 
     def validate(self):
+        """Checks whether or not the data spec is valid.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+        """
         self.dump()
 
     @classmethod
     def load(cls, data):
+        """Loads the data from a Python data structure.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+
+        Returns:
+            The data spec object.
+        """
         try:
             return cls._schema.load(data)
         except ValidationError as e:
             raise SpecValidationError(e.messages) from e
 
     def to_json(self):
+        """Returns a json representation of the data spec.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+
+        Returns:
+            str: The json representation of the data spec.
+        """
         return json.dumps(self.dump(), indent=4, sort_keys=True)
 
     @classmethod
     def from_json(cls, s: str):
+        """Loads the data spec from a json representation.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+
+        Returns:
+            The data spec object.
+        """
         return cls.load(json.loads(s))
 
     def copy(self):
+        """Returns a copy of the data spec.
+
+        Raises:
+            SpecValidationError: If the spec is not valid.
+        """
         return self.from_json(self.to_json())
 
     def __str__(self):
@@ -66,6 +108,21 @@ class _BaseSpec:
 
 
 class TimeSeriesSpec(_BaseSpec):
+    """Creates a time series spec.
+
+    If the granularity and aggregate parameters are omitted, the TimeSeriesSpec specifies raw data.
+
+    Args:
+        id (int): The id of the time series.
+        start (Union[str, int, datetime]): The (inclusive) start of the time series. Can be either milliseconds since epoch,
+        time-ago format (e.g. "1d-ago"), or a datetime object.
+        end (Union[str, int, datetime]): The (exclusive) end of the time series. Same format as start. Can also be set to "now".
+        aggregate (str, optional): The aggregate function to apply to the time series.
+        granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
+        include_outside_points (bool): Whether or not to include the first point before and after start and end. Can
+                                        only be used with raw data.
+    """
+
     def __init__(
         self,
         id: int,
@@ -83,20 +140,29 @@ class TimeSeriesSpec(_BaseSpec):
         self.include_outside_points = include_outside_points
 
 
-class ScheduleInputTimeSeriesSpec(_BaseSpec):
-    def __init__(self, id: int, aggregate: str = None, granularity: str = None, include_outside_points: bool = None):
-        self.id = id
-        self.aggregate = aggregate
-        self.granularity = granularity
-        self.include_outside_points = include_outside_points
-
-
 class FileSpec(_BaseSpec):
+    """Creates a file spec.
+
+    Args:
+        id (int): The id of the file.
+    """
+
     def __init__(self, id: int):
         self.id = id
 
 
 class DataSpec(_BaseSpec):
+    """Creates a DataSpec.
+
+    This object collects all data specs specific for a given resource type into a single object which can be passed
+    to the DataFetcher. It includes aliases for all specs so that they may be referenced by a user-defined
+    shorthand and abstracted away from specific resources.
+
+    Args:
+        time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
+        files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
+    """
+
     def __init__(self, time_series: Dict[str, TimeSeriesSpec] = None, files: Dict[str, FileSpec] = None):
         self.time_series = time_series or {}
         self.files = files or {}
@@ -104,23 +170,91 @@ class DataSpec(_BaseSpec):
         self.validate()
 
 
+class ScheduleInputTimeSeriesSpec(_BaseSpec):
+    """Creates a ScheduleOutputTimeSeriesSpec.
+
+    This object defines the time series a schedule should read from.
+
+    If the granularity and aggregate parameters are omitted, the spec specifies raw data.
+
+    Args:
+        id (int): The id of the output time series.
+        aggregate (str, optional): The aggregate function to apply to the time series.
+        granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
+        include_outside_points (bool, optional): Whether or not to include the first point before and after start and
+            end. Can only be used with raw data.
+    """
+
+    def __init__(self, id: int, aggregate: str = None, granularity: str = None, include_outside_points: bool = None):
+        self.id = id
+        self.aggregate = aggregate
+        self.granularity = granularity
+        self.include_outside_points = include_outside_points
+
+
 class ScheduleInputSpec(_BaseSpec):
+    """Creates a ScheduleInputSpec.
+
+    The provided aliases must be the same as the input fields defined on the model.
+
+    Args:
+        time_series (Dict[str, ScheduleInputTimeSeriesSpec]): A dictionary mapping aliases to
+            ScheduleInputTimeSeriesSpec objects.
+    """
+
     def __init__(self, time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None):
         self.time_series = time_series or {}
 
 
 class ScheduleOutputTimeSeriesSpec(_BaseSpec):
+    """Creates a ScheduleOutputTimeSeriesSpec.
+
+    This object defines the time series a schedule should write to. You need to specify an offset which
+    defines where in time your schedule can write data to for a given window. Offset defaults to 0, meaning that your
+    schedule can write to the same time window which it was feeded data from.
+
+    Args:
+        id (int): The id of the output time series.
+        offset (Union[int, str, timedelta], optional): The offset of the window to which your schedule is allowed to
+            write data.
+    """
+
     def __init__(self, id: int, offset: Union[int, str, timedelta] = 0):
         self.id = id
         self.offset = offset
 
 
 class ScheduleOutputSpec(_BaseSpec):
+    """Creates a ScheduleOutputSpec.
+
+    The provided aliases must be the same as the output fields defined on the model.
+
+    Args:
+        time_series (Dict[str, ScheduleInputTimeSeriesSpec]): A dictionary mapping aliases to
+            ScheduleOutputTimeSeriesSpec objects.
+    """
+
     def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
         self.time_series = time_series
 
 
 class ScheduleDataSpec(_BaseSpec):
+    """Creates a ScheduleDataSpec.
+
+    This spec defines the input and output data for a given schedule, as well as how the hosting environment should
+    feed the specified data to your model. This is done by specifying window size, a stride, and start time
+    for the schedule.
+
+    Args:
+        input (ScheduleInputSpec): A schedule input spec describing input for a model.
+        output (ScheduleOutputSpec): A schedule output spec describing output for a model.
+        stride (Union[int, str, timedelta]): The interval at which predictions will be made. Can be either
+            milliseconds, a timedelta object, or a time-string (e.g. "1h", "10d", "120s").
+        window_size (Union[int, str, timedelta]): The size of each prediction window, i.e. how long back in time a
+            prediction will look. Same format as stride.
+        start (Union[int, str, datetime]): When the first prediction will be made.
+    """
+
     def __init__(
         self,
         input: ScheduleInputSpec,
@@ -137,7 +271,17 @@ class ScheduleDataSpec(_BaseSpec):
 
         self.validate()
 
-    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
+    def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[DataSpec]:
+        """Returns the DataSpec objects describing the prediction windows executed between start and end.
+
+        Args:
+            start (Union[str, int, datetime]): The start of the time period. Can be either milliseconds since epoch,
+                time-ago format (e.g. "1d-ago"), or a datetime object.
+            end (Union[str, int, datetime]): The end of the time period. Same format as start. Can also be set to "now".
+
+        Returns:
+            List[DataSpec]: List of DataSpec objects, one for each prediction window.
+        """
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(
@@ -160,7 +304,19 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(DataSpec(time_series=time_series_specs))
         return data_specs
 
-    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]):
+    def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[int]:
+        """Returns a list of timestamps indicating when each prediction will be executed.
+
+        This corresponds to the end of each DataSpec returned from get_instances().
+
+        Args:
+            start (Union[str, int, datetime]): The start of the time period. Can be either milliseconds since epoch,
+                    time-ago format (e.g. "1d-ago"), or a datetime object.
+            end (Union[str, int, datetime]): The end of the time period. Same format as start. Can also be set to "now".
+
+        Returns:
+            List[int]: A list of timestamps.
+        """
         start, end = timestamp_to_ms(start), timestamp_to_ms(end)
 
         windows = calculate_windows(

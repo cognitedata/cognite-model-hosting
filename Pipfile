@@ -19,6 +19,8 @@ pandas = "*"
 marshmallow = "==3.0.0rc4"
 requests = "<3.0.0,>=2.21.0"
 responses = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
 
 [requires]
 python_version = "3.7"
