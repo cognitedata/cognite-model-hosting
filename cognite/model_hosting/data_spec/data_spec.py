@@ -53,7 +53,7 @@ class _BaseSpec:
 
     @classmethod
     def load(cls, data):
-        """Load the data from a Python data structure.
+        """Loads the data from a Python data structure.
 
         Raises:
             SpecValidationError: If the spec is not valid.
