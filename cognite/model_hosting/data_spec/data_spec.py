@@ -173,7 +173,7 @@ class DataSpec(_BaseSpec):
 class ScheduleInputTimeSeriesSpec(_BaseSpec):
     """Creates a ScheduleOutputTimeSeriesSpec.
 
-    This object defines the time series a schedule on a given model should read from.
+    This object defines the time series a schedule should read from.
 
     If the granularity and aggregate parameters are omitted, the spec specifies raw data.
 
@@ -209,7 +209,7 @@ class ScheduleInputSpec(_BaseSpec):
 class ScheduleOutputTimeSeriesSpec(_BaseSpec):
     """Creates a ScheduleOutputTimeSeriesSpec.
 
-    This object defines the time series a schedule on a given model should write to. You need to specify an offset which
+    This object defines the time series a schedule should write to. You need to specify an offset which
     defines where in time your schedule can write data to for a given window. Offset defaults to 0, meaning that your
     schedule can write to the same time window which it was feeded data from.
 
