@@ -215,7 +215,7 @@ class ScheduleOutputTimeSeriesSpec(_BaseSpec):
 
     Args:
         id (int): The id of the output time series.
-        offset (Union[int, str, timedelta], optional): The offset of the window to which yoru schedule is allowed to
+        offset (Union[int, str, timedelta], optional): The offset of the window to which your schedule is allowed to
             write data.
     """
 
