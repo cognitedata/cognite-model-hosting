@@ -5,36 +5,38 @@ import pandas as pd
 import pytest
 
 from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
-from tests.utils import random_string
+from tests.utils import get_time_series_and_create_if_missing, random_string
 
-CLIENT = None
+CLIENT = CdpClient()
 
+prefix = "DO_NOT_DELETE_MODEL_HOSTING_TEST_TS"
+TEST_TS_1 = prefix + "_1"
+TEST_TS_2 = prefix + "_2"
 
-@pytest.fixture(scope="session", autouse=True)
-def cdp_client():
-    global CLIENT
-    CLIENT = CdpClient()
+DPS_START = 1544569200000
+DPS_END = DPS_START + 10000
 
 
 @pytest.fixture(scope="session")
 def time_series_in_tenant():
-    ts_list = CLIENT.get("/timeseries".format(CLIENT._project), params={"limit": 3, "description": "A"}).json()
-    return ts_list["data"]["items"]
+    return get_time_series_and_create_if_missing([TEST_TS_1, TEST_TS_2], prefix, DPS_START, DPS_END)
 
 
 def test_get_datapoints_frame_single(time_series_in_tenant):
     ts_id = time_series_in_tenant[0]["id"]
-    df = CLIENT.get_datapoints_frame_single(ts_id, start=1498044290000, end=1498044700000)
-    assert df.shape[1] == 2
+    df = CLIENT.get_datapoints_frame_single(ts_id, start=DPS_START, end=DPS_END)
+    assert 2 == df.shape[1]
     assert df.shape[0] > 0
 
 
 def test_get_datapoints_frame(time_series_in_tenant):
-    time_series = [{"id": ts["id"], "aggregate": "min"} for ts in time_series_in_tenant]
-    time_series.append({"id": time_series_in_tenant[0]["id"], "aggregate": "max"})
-    res = CLIENT.get_datapoints_frame(time_series, granularity="1m", start=1498044290000, end=1498044700000)
+    time_series = [
+        {"id": time_series_in_tenant[0]["id"], "aggregate": "min"},
+        {"id": time_series_in_tenant[1]["id"], "aggregate": "max"},
+    ]
+    res = CLIENT.get_datapoints_frame(time_series, granularity="1s", start=DPS_START, end=DPS_END)
     assert isinstance(res, pd.DataFrame)
-    assert 5 == res.shape[1]
+    assert 3 == res.shape[1]
     assert res.shape[0] > 0
 
 
