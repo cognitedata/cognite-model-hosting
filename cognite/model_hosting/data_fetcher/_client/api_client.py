@@ -1,4 +1,5 @@
 import gzip
+import json
 import logging
 import os
 import sys
@@ -23,15 +24,6 @@ HTTP_METHODS_TO_RETRY = ["GET", "DELETE"]
 log = logging.getLogger("data-fetcher")
 
 
-class _GzipAdapter(HTTPAdapter):
-    def add_headers(self, request, **kwargs):
-        requests.headers["Content-Encoding"] = "gzip"
-
-    def send(self, request, **kwargs):
-        request.body = gzip.compress(request.body)
-        super().send(request, **kwargs)
-
-
 def _init_requests_session():
     session = requests.Session()
     retry = Retry(
@@ -42,7 +34,6 @@ def _init_requests_session():
     )
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("http://", adapter)
-    session.mount("https://", _GzipAdapter())
     session.mount("https://", adapter)
     return session
 
@@ -101,41 +92,37 @@ class ApiClient:
         url: str,
         api_version: Optional[str] = "0.5",
         json: Optional[Any] = None,
-        data: Optional[Union[str, bytes]] = None,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
     ):
-        return self._do_request(
-            "POST", url, api_version=api_version, headers=headers, params=params, json=json, data=data
-        )
+        return self._do_request("POST", url, api_version=api_version, headers=headers, params=params, data=json)
 
     def delete(
         self,
         url: str,
         api_version: Optional[str] = "0.5",
         json: Optional[Any] = None,
-        data: Optional[Union[str, bytes]] = None,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
     ):
-        return self._do_request(
-            "DELETE", url, api_version=api_version, headers=headers, params=params, json=json, data=data
-        )
+        return self._do_request("DELETE", url, api_version=api_version, headers=headers, params=params, data=json)
 
     def _do_request(
         self,
         method: str,
         url: str,
         api_version: Optional[str] = "0.5",
-        json: Optional[Any] = None,
         data: Optional[Union[str, bytes]] = None,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
     ):
         full_url = self._get_full_url(url, api_version)
         headers = {**self._headers, **(headers or {})}
+        if data:
+            headers["Content-Encoding"] = "gzip"
+            data = gzip.compress(json.dumps(data).encode())
         response = requests.request(
-            method, full_url, headers=headers, params=params, json=json, data=data, timeout=DEFAULT_TIMEOUT
+            method, full_url, headers=headers, params=params, data=data, timeout=DEFAULT_TIMEOUT
         )
         if not _status_is_valid(response.status_code):
             _raise_API_error(response)
