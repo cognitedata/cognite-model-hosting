@@ -166,7 +166,6 @@ class DataSpec(_BaseSpec):
     def __init__(self, time_series: Dict[str, TimeSeriesSpec] = None, files: Dict[str, FileSpec] = None):
         self.time_series = time_series or {}
         self.files = files or {}
-
         self.validate()
 
 
