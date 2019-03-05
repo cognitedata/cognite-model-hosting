@@ -72,7 +72,7 @@ class ApiClient:
             "api-key": self._api_key,
             "content-type": "application/json",
             "accept": "application/json",
-            "User-agent": "cognite-data-fetcher/{}".format(cognite.model_hosting.__version__),
+            "User-agent": "cognite-data-fetcher/{}".format(cognite.model_hosting.data_fetcher.__version__),
         }
         self._project = project or thread_local_project or self._get_project(self._api_key)
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)

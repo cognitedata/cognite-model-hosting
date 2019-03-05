@@ -34,21 +34,32 @@ Data Spec
     :inherited-members:
 
 Time Series Spec
-~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^
 .. autoclass:: cognite.model_hosting.data_spec.TimeSeriesSpec
     :members:
     :member-order: bysource
     :inherited-members:
 
 File Spec
-~~~~~~~~~
+^^^^^^^^^
 .. autoclass:: cognite.model_hosting.data_spec.FileSpec
     :members:
     :member-order: bysource
     :inherited-members:
 
+
+Exceptions
+^^^^^^^^^^
+.. automodule:: cognite.model_hosting.data_spec.exceptions
+    :members:
+
+
+Schedules
+---------
+Data Specs
+^^^^^^^^^^
 Schedule Data Spec
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 .. autoclass:: cognite.model_hosting.data_spec.ScheduleDataSpec
     :members:
     :member-order: bysource
@@ -82,7 +93,12 @@ Schedule Output Time Series
     :member-order: bysource
     :inherited-members:
 
+Helpers
+^^^^^^^
+.. automodule:: cognite.model_hosting.schedules.helpers
+    :members:
+
 Exceptions
 ^^^^^^^^^^
-.. automodule:: cognite.model_hosting.data_spec.exceptions
+.. automodule:: cognite.model_hosting.schedules.exceptions
     :members:

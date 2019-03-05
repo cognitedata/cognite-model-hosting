@@ -21,7 +21,7 @@ def _execute_tasks_concurrently(func, tasks):
 class FileFetcher:
     """An object used for fetching files from CDP.
 
-    This class should never be instantiated directly, but rather accessed through the DataFetcher class.
+    .. attention:: This class should never be instantiated directly, but rather accessed through the DataFetcher class.
 
     Examples:
         Using the FileFetcher::
@@ -123,17 +123,17 @@ class FileFetcher:
 class TimeSeriesFetcher:
     """An object used for fetching time series data from CDP.
 
-        This class should never be instantiated directly, but rather accessed through the DataFetcher class.
+    .. attention:: This class should never be instantiated directly, but rather accessed through the DataFetcher class.
 
-        Examples:
-            Using the TimeSeriesFetcher::
+    Examples:
+        Using the TimeSeriesFetcher::
 
-                from cognite.model_hosting.data_fetcher import DataFetcher
+            from cognite.model_hosting.data_fetcher import DataFetcher
 
-                data_fetcher = DataFetcher(data_spec=...)
+            data_fetcher = DataFetcher(data_spec=...)
 
-                my_datapoints = data_fetcher.time_series.fetch_datapoints(alias="my_ts_1")
-        """
+            my_datapoints = data_fetcher.time_series.fetch_datapoints(alias="my_ts_1")
+    """
 
     def __init__(self, time_series_specs: Dict[str, TimeSeriesSpec], cdp_client: CdpClient):
         self._specs = time_series_specs
