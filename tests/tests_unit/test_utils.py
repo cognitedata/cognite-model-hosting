@@ -4,7 +4,12 @@ from unittest import mock
 
 import pytest
 
-from cognite.model_hosting._cognite_model_hosting_common.utils import granularity_to_ms, time_interval_to_ms, time_offset_to_ms, timestamp_to_ms
+from cognite.model_hosting._cognite_model_hosting_common.utils import (
+    granularity_to_ms,
+    time_interval_to_ms,
+    time_offset_to_ms,
+    timestamp_to_ms,
+)
 
 
 class TestTimestampToMs:
