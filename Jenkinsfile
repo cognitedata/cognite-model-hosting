@@ -56,6 +56,11 @@ podTemplate(
                 sh("pipenv run black -l 120 --check .")
                 sh("pipenv run isort -w 120 -m 3 -tc -rc --check-only .")
             }
+            stage('Build Docs') {
+                dir('./docs'){
+                    sh("pipenv run sphinx-build -W -b html ./source ./build")
+                }
+            }
             stage('Test and coverage report') {
                 sh("pyenv local 3.5.0 3.6.6 3.7.2")
                 sh("pipenv run tox -p all")

@@ -95,7 +95,7 @@ Schedule Output Time Series
 
 Helpers
 ^^^^^^^
-.. automodule:: cognite.model_hosting.schedules.helpers
+.. automodule:: cognite.model_hosting.schedules.schedules
     :members:
 
 Exceptions
