@@ -4,8 +4,12 @@ from collections import namedtuple
 import pandas as pd
 import pytest
 
-from cognite.model_hosting.schedules.exceptions import InvalidScheduleOutputFormat
-from cognite.model_hosting.schedules.helpers import ScheduleOutput, convert_to_output_format
+from cognite.model_hosting.schedules import ScheduleOutput, to_output
+from cognite.model_hosting.schedules.exceptions import (
+    DataframeMissingTimestampColumn,
+    DuplicateAliasInScheduledOutput,
+    InvalidScheduleOutputFormat,
+)
 
 
 class TestConvertToOutput:
@@ -39,7 +43,15 @@ class TestConvertToOutput:
 
     @pytest.mark.parametrize("input, expected_output", valid_test_cases)
     def test_convert_to_output_format_ok(self, input, expected_output):
-        assert expected_output == convert_to_output_format(input)
+        assert expected_output == to_output(input)
+
+    def test_convert_to_output_no_timestamp(self):
+        with pytest.raises(DataframeMissingTimestampColumn, match="missing"):
+            to_output(pd.DataFrame({"x": [1, 2, 3], "y": [2, 3, 4]}))
+
+    def test_convert_to_output_duplicate_alias(self):
+        with pytest.raises(DuplicateAliasInScheduledOutput, match="multiple"):
+            to_output([pd.DataFrame({"x": [1], "timestamp": [1]}), pd.DataFrame({"x": [1], "timestamp": [1]})])
 
 
 class TestValidateOutputFormat:
@@ -61,11 +73,10 @@ class TestValidateOutputFormat:
     def test_schedule_output_invalid_format(self, input, error_msg):
         with pytest.raises(InvalidScheduleOutputFormat) as e:
             s = ScheduleOutput(input)
-            print(s._output)
         assert json.dumps(e.value.errors) == json.dumps(error_msg)
 
 
-class TestConvertFromOutput:
+class TestConvertToDatapoints:
     ValidTestCase = namedtuple("TestCase", ["input", "alias", "expected_output"])
     InvalidTestCase = namedtuple("InvalidTestCase", ["input", "alias", "match"])
 
@@ -97,9 +108,9 @@ class TestConvertFromOutput:
         actual_output = so.get_datapoints(alias)
         if isinstance(expected_output, dict):
             for key in expected_output:
-                assert expected_output[key].equals(actual_output[key])
+                pd.testing.assert_frame_equal(expected_output[key], actual_output[key], check_dtype=False)
         elif isinstance(expected_output, pd.DataFrame):
-            assert expected_output.equals(actual_output)
+            pd.testing.assert_frame_equal(expected_output, actual_output, check_dtype=False)
         else:
             raise AssertionError("Expected output must be dict or DataFrame")
 
@@ -109,6 +120,8 @@ class TestConvertFromOutput:
             so = ScheduleOutput(input)
             so.get_datapoints(alias)
 
+
+class TestConvertToDataFrame:
     ValidTestCase = namedtuple("TestCase", ["input", "alias", "expected_output"])
     InvalidTestCase = namedtuple("InvalidTestCase", ["input", "alias", "match"])
 
@@ -140,7 +153,7 @@ class TestConvertFromOutput:
     def test_get_dataframe_ok(self, input, alias, expected_output):
         so = ScheduleOutput(input)
         actual_output = so.get_dataframe(alias)
-        assert expected_output.equals(actual_output)
+        pd.testing.assert_frame_equal(expected_output, actual_output, check_dtype=False)
 
     @pytest.mark.parametrize("input, alias, match", invalid_test_cases)
     def test_get_dataframe_invalid(self, input, alias, match):
@@ -148,9 +161,10 @@ class TestConvertFromOutput:
             so = ScheduleOutput(input)
             so.get_dataframe(alias)
 
+
+class TestScheduleOutputImmutable:
     def test_output_immutable(self):
         output = {"timeSeries": {"x": [[0, 1]]}}
         so = ScheduleOutput(output)
-        output["timeSeries"] = None
-
+        output["timeSeries"]["x"] = None
         assert so._output != output

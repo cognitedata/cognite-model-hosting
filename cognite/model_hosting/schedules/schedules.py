@@ -1,13 +1,18 @@
+import json
 from collections import defaultdict
 from typing import Dict, List, Union
 
 import pandas as pd
-from marshmallow import INCLUDE, RAISE, Schema, ValidationError, fields, validate
+from marshmallow import RAISE, Schema, ValidationError, fields, validate
 
-from cognite.model_hosting.schedules.exceptions import InvalidScheduleOutputFormat
+from cognite.model_hosting.schedules.exceptions import (
+    DataframeMissingTimestampColumn,
+    DuplicateAliasInScheduledOutput,
+    InvalidScheduleOutputFormat,
+)
 
 
-def convert_to_output_format(dataframe: Union[pd.DataFrame, List[pd.DataFrame]]):
+def to_output(dataframe: Union[pd.DataFrame, List[pd.DataFrame]]):
     """Converts your data to a json serializable output format complying with the schedules feature.
 
     Args:
@@ -32,14 +37,17 @@ def convert_to_output_format(dataframe: Union[pd.DataFrame, List[pd.DataFrame]])
         output["timeSeries"] = _convert_df_to_output_format(dataframe)
     elif isinstance(dataframe, List):
         for df in dataframe:
+            if set(df.columns) - set(output["timeSeries"].keys()) != set(df.columns):
+                raise DuplicateAliasInScheduledOutput("An alias has been provided multiple times")
             output["timeSeries"].update(_convert_df_to_output_format(df))
     else:
-        raise ValueError("dataframe should be a pandas DataFrame or list of pandas DataFrames")
+        raise TypeError("dataframe should be a pandas DataFrame or list of pandas DataFrames")
     return output
 
 
 def _convert_df_to_output_format(df: pd.DataFrame):
-    assert "timestamp" in df.columns, "DataFrame missing timestamp column"
+    if not "timestamp" in df.columns:
+        raise DataframeMissingTimestampColumn("DataFrame missing timestamp column")
     column_names = [col for col in df.columns if col != "timestamp"]
     output = {name: df[["timestamp", name]].values.tolist() for name in column_names}
     return output
@@ -50,7 +58,7 @@ class _ScheduleOutputSchema(Schema):
         unknown = RAISE
 
     timeSeries = fields.Dict(
-        keys=fields.Str(), values=fields.List(fields.List(fields.Raw(), validate=validate.Length(equal=2)))
+        keys=fields.Str(), values=fields.List(fields.List(fields.Float(), validate=validate.Length(equal=2)))
     )
 
 
@@ -65,13 +73,15 @@ class ScheduleOutput:
     """
 
     def __init__(self, output: Dict):
+        self._output = self._load(output)
 
-        self._output = output.copy()
-        self._validate()
+    def __str__(self):
+        return json.dumps(self._output, indent=4, sort_keys=True)
 
-    def _validate(self):
+    @staticmethod
+    def _load(output):
         try:
-            _schedule_output_schema.load(self._output)
+            return _schedule_output_schema.load(output)
         except ValidationError as e:
             raise InvalidScheduleOutputFormat(e.messages) from e
 
@@ -82,7 +92,7 @@ class ScheduleOutput:
         timestamps = set()
         for alias in aliases:
             self._validate_alias("timeSeries", alias)
-            timestamps.add(",".join([str(point[0]) for point in self._output["timeSeries"][alias]]))
+            timestamps.add(tuple(point[0] for point in self._output["timeSeries"][alias]))
         assert 1 == len(timestamps), "Timestamps for aliases {} are not aligned".format(aliases)
 
     def _get_dataframe_single_alias(self, alias) -> pd.DataFrame:
@@ -116,13 +126,13 @@ class ScheduleOutput:
             return self._get_dataframe_single_alias(alias)
         elif isinstance(alias, List):
             return self._get_dataframe_multiple_aliases(alias)
-        raise ValueError("alias must be a string or list of strings")
+        raise TypeError("alias must be a string or list of strings")
 
     def get_datapoints(self, alias: Union[str, List[str]]) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """Returns the dataframes for the specified alias(es).
 
         Args:
-            alias (Union[str, Liststr]]): alias or list of aliases.
+            alias (Union[str, List[str]]): alias or list of aliases.
 
         Returns:
             Union[pd.DataFrame, Dict[str, pd.DataFrame]: A single dataframe if a single alias has been specified. Or a
@@ -135,4 +145,4 @@ class ScheduleOutput:
             for a in alias:
                 dataframes[a] = self._get_dataframe_single_alias(a)
             return dataframes
-        raise ValueError("alias must be a string or list of strings")
+        raise TypeError("alias must be a string or list of strings")
