@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import pytest
 
-from cognite.model_hosting._utils import calculate_windows
+from cognite.model_hosting._cognite_model_hosting_common.utils import calculate_windows
 from cognite.model_hosting.data_spec import (
     DataSpec,
     ScheduleDataSpec,

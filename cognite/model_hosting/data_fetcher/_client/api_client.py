@@ -10,7 +10,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-import cognite.model_hosting._version
+import cognite.model_hosting._cognite_model_hosting_common.version
 from cognite.model_hosting.data_fetcher._client.utils import _status_is_valid
 from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError, DataFetcherHttpError
 
@@ -72,7 +72,8 @@ class ApiClient:
             "api-key": self._api_key,
             "content-type": "application/json",
             "accept": "application/json",
-            "User-Agent": "CogniteDataFetcher/{}".format(cognite.model_hosting._version.__version__),
+            "User-Agent": "CogniteDataFetcher/{}".format(
+                cognite.model_hosting._cognite_model_hosting_common.version.__version__),
         }
         self._project = project or thread_local_project or self._get_project(self._api_key)
         self._base_url_v0_5 = self._base_url + "/api/0.5/projects/{}".format(self._project)

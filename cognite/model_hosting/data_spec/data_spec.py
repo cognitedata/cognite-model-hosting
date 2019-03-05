@@ -15,7 +15,7 @@ from marshmallow import (
     validates_schema,
 )
 
-from cognite.model_hosting._utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
+from cognite.model_hosting._cognite_model_hosting_common.utils import calculate_windows, granularity_to_ms, time_interval_to_ms, timestamp_to_ms
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
 INVALID_AGGREGATE_FUNCTIONS = ["avg", "cv", "dv", "int", "step", "tv"]

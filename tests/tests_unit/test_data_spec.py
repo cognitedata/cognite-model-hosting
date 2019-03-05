@@ -325,7 +325,7 @@ def test_copy():
 class TestSpecConstructor:
     @pytest.fixture(autouse=True, scope="class")
     def mock_time(self):
-        with mock.patch("cognite.model_hosting._utils.time.time") as m:
+        with mock.patch("cognite.model_hosting._cognite_model_hosting_common.utils.time.time") as m:
             m.return_value = 10 ** 6
             yield
 
