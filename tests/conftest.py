@@ -15,6 +15,6 @@ def rsps():
 
 @pytest.fixture(autouse=True)
 def reset_now_cache():
-    from cognite.model_hosting._utils import NowCache
+    from cognite.model_hosting._cognite_model_hosting_common.utils import NowCache
 
     NowCache._cached_now = 0
