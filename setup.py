@@ -1,7 +1,7 @@
 import re
 
 from setuptools import setup, find_packages
-print(["cognite.model_hosting." + p for p in find_packages(where="cognite/model_hosting")])
+
 version = re.search(
     '^__version__\s*=\s*"(.*)"', open("cognite/model_hosting/_cognite_model_hosting_common/version.py").read(), re.M
 ).group(1)
