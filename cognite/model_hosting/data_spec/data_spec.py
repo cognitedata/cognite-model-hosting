@@ -18,6 +18,7 @@ from marshmallow import (
 from cognite.model_hosting._cognite_model_hosting_common.utils import (
     calculate_windows,
     granularity_to_ms,
+    granularity_unit_to_ms,
     time_interval_to_ms,
     timestamp_to_ms,
 )
@@ -209,6 +210,30 @@ class ScheduleInputSpec(_BaseSpec):
     def __init__(self, time_series: Dict[str, ScheduleInputTimeSeriesSpec] = None):
         self.time_series = time_series or {}
 
+    def _is_aggregates_used(self):
+        for time_series_spec in self.time_series.values():
+            if time_series_spec.aggregate:
+                return True
+        return False
+
+    def _largest_granularity(self):
+        largest = None
+        for time_series_spec in self.time_series.values():
+            if time_series_spec.aggregate:
+                ms = granularity_to_ms(time_series_spec.granularity)
+                if largest is None or ms > largest:
+                    largest = ms
+        return largest
+
+    def _largest_granularity_unit(self):
+        largest = None
+        for time_series_spec in self.time_series.values():
+            if time_series_spec.aggregate:
+                ms = granularity_unit_to_ms(time_series_spec.granularity)
+                if largest is None or ms > largest:
+                    largest = ms
+        return largest
+
 
 class ScheduleOutputTimeSeriesSpec(_BaseSpec):
     """Creates a ScheduleOutputTimeSeriesSpec.
@@ -271,9 +296,24 @@ class ScheduleDataSpec(_BaseSpec):
         self.output = output
         self.stride = time_interval_to_ms(stride)
         self.window_size = time_interval_to_ms(window_size)
-        self.start = timestamp_to_ms(start)
+        self.start = self._get_start(start, input)
 
         self.validate()
+
+    @staticmethod
+    def _get_start(start, input):
+        if not isinstance(input, ScheduleInputSpec):
+            raise TypeError("`input` argument must be of type ScheduleInputSpec")
+
+        if start == "now" and input._is_aggregates_used():
+            largest_granularity_unit = input._largest_granularity_unit()
+            start = timestamp_to_ms(start)
+            start -= start % largest_granularity_unit
+            start += largest_granularity_unit
+        else:
+            start = timestamp_to_ms(start)
+
+        return start
 
     def get_instances(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[DataSpec]:
         """Returns the DataSpec objects describing the prediction windows executed between start and end.
@@ -451,6 +491,33 @@ class _ScheduleDataSpecSchema(_BaseSchema):
     stride = fields.Int(required=True, validate=validate.Range(min=1))
     windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
     start = fields.Int(required=True, validate=validate.Range(min=0))
+
+    @staticmethod
+    def _validate_aggregate_constraints(data):
+        errors = {}
+
+        largest_granularity_unit = data["input"]._largest_granularity_unit()
+        for field in ["stride", "window_size", "start"]:
+            if data[field] % largest_granularity_unit != 0:
+                # To correct for surprising behaviour in Marshmallow
+                field_camel_case = re.sub(r"_(.)", lambda m: m.group(1).upper(), field)
+                errors[field_camel_case] = [
+                    "Must be a multiple of the largest granularity unit in the input time series."
+                ]
+
+        largest_granularity = data["input"]._largest_granularity()
+        if data["window_size"] < largest_granularity:
+            errors["windowSize"] = [
+                "Must be at least the length of the largest granularity by any aggregate input time series."
+            ]
+
+        if errors:
+            raise ValidationError(errors)
+
+    @validates_schema(skip_on_field_errors=True)
+    def _validate(self, data):
+        if data["input"].time_series and data["input"]._is_aggregates_used():
+            self._validate_aggregate_constraints(data)
 
 
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
