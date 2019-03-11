@@ -306,7 +306,7 @@ class TestSpecValidation:
             errors={
                 "stride": ["Must be a multiple of the largest granularity unit in the input time series."],
                 "windowSize": [
-                    "Must be at least the length of the largest granularity by any aggregate input time series."
+                    "Must be greater than or equal to the largest granularity of any of aggregated input time series."
                 ],
                 "start": ["Must be a multiple of the largest granularity unit in the input time series."],
             },

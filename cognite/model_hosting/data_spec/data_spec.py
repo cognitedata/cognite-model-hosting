@@ -508,7 +508,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
         largest_granularity = data["input"]._largest_granularity()
         if data["window_size"] < largest_granularity:
             errors["windowSize"] = [
-                "Must be at least the length of the largest granularity by any aggregate input time series."
+                "Must be greater than or equal to the largest granularity of any of aggregated input time series."
             ]
 
         if errors:
