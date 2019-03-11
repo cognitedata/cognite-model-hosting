@@ -107,6 +107,33 @@ class TestSpecValidation:
                 "start": 3,
             },
         ),
+        TestCase(
+            "schedule_data_spec_with_aggregates",
+            ScheduleDataSpec(
+                input=ScheduleInputSpec(
+                    time_series={
+                        "ts1": ScheduleInputTimeSeriesSpec(id=5, aggregate="average", granularity="3h"),
+                        "ts2": ScheduleInputTimeSeriesSpec(id=6, aggregate="max", granularity="10m"),
+                    }
+                ),
+                output=ScheduleOutputSpec(),
+                stride=60 * 60 * 1000,
+                window_size=3 * 60 * 60 * 1000,
+                start=123 * 60 * 60 * 1000,
+            ),
+            {
+                "input": {
+                    "timeSeries": {
+                        "ts1": {"id": 5, "aggregate": "average", "granularity": "3h"},
+                        "ts2": {"id": 6, "aggregate": "max", "granularity": "10m"},
+                    }
+                },
+                "output": {},
+                "stride": 60 * 60 * 1000,
+                "windowSize": 3 * 60 * 60 * 1000,
+                "start": 123 * 60 * 60 * 1000,
+            },
+        ),
     ]
 
     invalid_test_cases = [
@@ -187,20 +214,6 @@ class TestSpecValidation:
             },
         ),
         InvalidTestCase(
-            name="schedule_input_time_series_with_start_end",
-            type=ScheduleInputTimeSeriesSpec,
-            constructor=None,
-            primitive={"id": 6, "start": 123, "end": 234},
-            errors={"start": ["Unknown field."], "end": ["Unknown field."]},
-        ),
-        InvalidTestCase(
-            name="schedule_data_spec_invalid_stride_window_size",
-            type=ScheduleDataSpec,
-            constructor=None,
-            primitive={"input": {}, "output": {}, "windowSize": 0, "stride": -1, "start": 123},
-            errors={"stride": ["Must be at least 1."], "windowSize": ["Must be at least 1."]},
-        ),
-        InvalidTestCase(
             name="data_spec_nested_errors",
             type=DataSpec,
             constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
@@ -242,6 +255,13 @@ class TestSpecValidation:
         #     errors={"timeSeries": {"ts1": {"value": {"id": ["Not a valid integer."]}}}},
         # ),
         InvalidTestCase(
+            name="schedule_input_time_series_with_start_end",
+            type=ScheduleInputTimeSeriesSpec,
+            constructor=None,
+            primitive={"id": 6, "start": 123, "end": 234},
+            errors={"start": ["Unknown field."], "end": ["Unknown field."]},
+        ),
+        InvalidTestCase(
             name="schedule_output_time_series_spec_missing_fields",
             type=ScheduleOutputTimeSeriesSpec,
             constructor=lambda: ScheduleOutputTimeSeriesSpec(id=None, offset=None),
@@ -260,17 +280,48 @@ class TestSpecValidation:
                 "stride": ["Missing data for required field."],
             },
         ),
+        InvalidTestCase(
+            name="schedule_data_spec_invalid_stride_window_size",
+            type=ScheduleDataSpec,
+            constructor=None,
+            primitive={"input": {}, "output": {}, "windowSize": 0, "stride": -1, "start": 123},
+            errors={"stride": ["Must be at least 1."], "windowSize": ["Must be at least 1."]},
+        ),
+        InvalidTestCase(
+            name="schedule_data_spec_invalid_stride_window_size_start_multiple_of_largest_granularity_unit",
+            type=ScheduleDataSpec,
+            constructor=None,
+            primitive={
+                "input": {
+                    "timeSeries": {
+                        "ts1": {"id": 5, "aggregate": "average", "granularity": "3h"},
+                        "ts2": {"id": 6, "aggregate": "max", "granularity": "10m"},
+                    }
+                },
+                "output": {},
+                "windowSize": 123123,
+                "stride": 123123,
+                "start": 123123,
+            },
+            errors={
+                "stride": ["Must be a multiple of the largest granularity unit in the input time series."],
+                "windowSize": [
+                    "Must be greater than or equal to the largest granularity of any of aggregated input time series."
+                ],
+                "start": ["Must be a multiple of the largest granularity unit in the input time series."],
+            },
+        ),
     ]
 
     @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
     def test_valid_dump(self, name, obj, primitive):
         dumped = obj.dump()
-        assert dumped == primitive, "\nDumped:\n{}\nPrimitive:\n{}\n".format(dumped, primitive)
+        assert dumped == primitive
 
     @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
     def test_valid_load(self, name, obj, primitive):
         loaded = obj.__class__.load(primitive)
-        assert loaded == obj, "\nLoaded: ({})\n{}\nObj: ({})\n{}\n".format(type(loaded), loaded, type(obj), obj)
+        assert loaded == obj
 
     @pytest.mark.parametrize("name, obj, primitive", valid_test_cases)
     def test_valid_json_serializable(self, name, obj, primitive):

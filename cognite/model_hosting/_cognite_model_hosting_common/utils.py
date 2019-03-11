@@ -30,7 +30,6 @@ def _time_string_to_ms(pattern, string, unit_in_ms):
 
 
 def granularity_to_ms(granularity: str) -> int:
-    """Returns millisecond representation of time-ago string"""
     ms = _time_string_to_ms(r"(\d+)({})", granularity, _unit_in_ms_without_week)
     if ms is None:
         raise ValueError(
@@ -39,6 +38,11 @@ def granularity_to_ms(granularity: str) -> int:
             )
         )
     return ms
+
+
+def granularity_unit_to_ms(granularity: str) -> int:
+    granularity = re.sub(r"^\d+", "1", granularity)
+    return granularity_to_ms(granularity)
 
 
 def _time_ago_to_ms(time_ago_string: str) -> int:

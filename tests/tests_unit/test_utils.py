@@ -6,6 +6,7 @@ import pytest
 
 from cognite.model_hosting._cognite_model_hosting_common.utils import (
     granularity_to_ms,
+    granularity_unit_to_ms,
     time_interval_to_ms,
     time_offset_to_ms,
     timestamp_to_ms,
@@ -147,6 +148,29 @@ class TestGranularityToMs:
     def test_to_ms_invalid(self, granularity):
         with pytest.raises(ValueError, match=granularity):
             granularity_to_ms(granularity)
+
+
+class TestGranularityUnitToMs:
+    @pytest.mark.parametrize(
+        "granularity, expected_ms",
+        [
+            ("1s", 1 * 1000),
+            ("13s", 1 * 1000),
+            ("1m", 1 * 60 * 1000),
+            ("13m", 1 * 60 * 1000),
+            ("1h", 1 * 60 * 60 * 1000),
+            ("13h", 1 * 60 * 60 * 1000),
+            ("1d", 1 * 24 * 60 * 60 * 1000),
+            ("13d", 1 * 24 * 60 * 60 * 1000),
+        ],
+    )
+    def test_to_ms(self, granularity, expected_ms):
+        assert granularity_unit_to_ms(granularity) == expected_ms
+
+    @pytest.mark.parametrize("granularity", ["2w", "-3h", "13m-ago", "13", "bla"])
+    def test_to_ms_invalid(self, granularity):
+        with pytest.raises(ValueError, match="format"):
+            granularity_unit_to_ms(granularity)
 
 
 class TestTimeOffsetToMs:
