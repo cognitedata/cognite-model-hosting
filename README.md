@@ -1,5 +1,5 @@
 <a href="https://cognite.com/">
-    <img src="https://github.com/cognitedata/cognite-graphic-profile/blob/master/cognite_logo.png" alt="Cognite logo" title="Cognite" align="right" height="80" />
+    <img src="https://github.com/cognitedata/cognite-python-docs/blob/master/img/cognite_logo.png" alt="Cognite logo" title="Cognite" align="right" height="80" />
 </a>
 
 Cognite Model Hosting Utilities
@@ -14,7 +14,7 @@ Utilities for Cognite model hosting environment.
 
 ## Documentation
 * [Model Hosting Utilities Documentation](https://cognite-model-hosting.readthedocs-hosted.com/en/latest/)
-* [SDK Documentation](https://cognite-sdk-python.readthedocs-hosted.com/en/latest/)
+* [SDK Documentation](https://cognite-docs.readthedocs-hosted.com/en/latest/)
 * [API Documentation](https://doc.cognitedata.com/)
 
 ## Installation
