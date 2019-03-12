@@ -1,6 +1,8 @@
 from collections import namedtuple
+from unittest.mock import patch
 
 import pytest
+from marshmallow import ValidationError
 
 from cognite.model_hosting._cognite_model_hosting_common.utils import calculate_windows
 from cognite.model_hosting.data_spec import (
@@ -11,6 +13,7 @@ from cognite.model_hosting.data_spec import (
     ScheduleOutputSpec,
     TimeSeriesSpec,
 )
+from cognite.model_hosting.data_spec.data_spec import _ScheduleDataSpecSchema
 
 
 class TestCalculateWindowIntervals:
@@ -84,3 +87,103 @@ class TestGetScheduleTimestamps:
             start=schedule_start,
         )
         assert expected_timestamp == schedule_data_spec.get_execution_timestamps(start, end)
+
+
+class TestValidateGranularityConstraints:
+    TestCase = namedtuple("TestCase", ["granularities", "stride", "window_size", "start"])
+    VALID_CASES = [
+        TestCase(
+            granularities=["3h", "5m"],
+            stride=1 * 60 * 60 * 1000,
+            window_size=3 * 60 * 60 * 1000,
+            start=4 * 60 * 60 * 1000,
+        ),
+        TestCase(
+            granularities=["3h", "5m"],
+            stride=3 * 60 * 60 * 1000,
+            window_size=4 * 60 * 60 * 1000,
+            start=123 * 60 * 60 * 1000,
+        ),
+        TestCase(
+            granularities=["45m", "1h"],
+            stride=1 * 60 * 60 * 1000,
+            window_size=1 * 60 * 60 * 1000,
+            start=123 * 60 * 60 * 1000,
+        ),
+        TestCase(
+            granularities=["3s", "5m", "7h", "13d"],
+            stride=2 * 24 * 60 * 60 * 1000,
+            window_size=14 * 24 * 60 * 60 * 1000,
+            start=123 * 24 * 60 * 60 * 1000,
+        ),
+        TestCase(granularities=["10s", "20s"], stride=1000, window_size=20 * 1000, start=1000),
+    ]
+    INVALID_CASES = [
+        TestCase(
+            granularities=["3h", "5m"], stride=30 * 60 * 1000, window_size=3 * 60 * 60 * 1000, start=4 * 60 * 60 * 1000
+        ),
+        TestCase(
+            granularities=["3h", "5m"],
+            stride=1 * 60 * 60 * 1000,
+            window_size=2 * 60 * 60 * 1000,
+            start=4 * 60 * 60 * 1000,
+        ),
+        TestCase(
+            granularities=["3h", "5m"],
+            stride=1 * 60 * 60 * 1000,
+            window_size=3 * 60 * 60 * 1000,
+            start=4.5 * 60 * 60 * 1000,
+        ),
+        TestCase(granularities=["10s", "20s"], stride=900, window_size=20 * 1000, start=10 * 1000),
+    ]
+
+    def _create_schedule_data_spec(self, test_case):
+        granularities, stride, window_size, start = test_case
+        input_spec = ScheduleInputSpec(
+            time_series={
+                "ts" + str(i): ScheduleInputTimeSeriesSpec(id=i, aggregate="average", granularity=g)
+                for i, g in enumerate(granularities)
+            }
+        )
+        input_spec.time_series["not-aggregate"] = ScheduleInputTimeSeriesSpec(id=123123)  # Not aggregate
+        spec = {"input": input_spec, "output": {}, "stride": stride, "window_size": window_size, "start": start}
+        return spec
+
+    @pytest.mark.parametrize("test_case", VALID_CASES)
+    def test_valid(self, test_case):
+        spec = self._create_schedule_data_spec(test_case)
+        _ScheduleDataSpecSchema()._validate(spec)
+
+    @pytest.mark.parametrize("test_case", INVALID_CASES)
+    def test_invalid(self, test_case):
+        spec = self._create_schedule_data_spec(test_case)
+        with pytest.raises(ValidationError):
+            _ScheduleDataSpecSchema()._validate(spec)
+
+
+class TestStartAggregateConstraint:
+    @patch("cognite.model_hosting._cognite_model_hosting_common.utils.NowCache")
+    def test_now_without_aggregate(self, now_cache):
+        now_cache.get_time_now.return_value = 3 * 60 * 60 * 1000 + 3000
+        schedule_data_spec = ScheduleDataSpec(
+            input=ScheduleInputSpec(time_series={"ts1": ScheduleInputTimeSeriesSpec(id=3)}),
+            output=ScheduleOutputSpec(),
+            stride="1h",
+            window_size="10h",
+            start="now",
+        )
+        assert 3 * 60 * 60 * 1000 + 3000 == schedule_data_spec.start
+
+    @patch("cognite.model_hosting._cognite_model_hosting_common.utils.NowCache")
+    def test_now_with_aggregate(self, now_cache):
+        now_cache.get_time_now.return_value = 3 * 60 * 60 * 1000 + 3000
+        schedule_data_spec = ScheduleDataSpec(
+            input=ScheduleInputSpec(
+                time_series={"ts1": ScheduleInputTimeSeriesSpec(id=3, aggregate="max", granularity="10h")}
+            ),
+            output=ScheduleOutputSpec(),
+            stride="1h",
+            window_size="10h",
+            start="now",
+        )
+        assert 4 * 60 * 60 * 1000 == schedule_data_spec.start
