@@ -5,7 +5,7 @@ import os
 import sys
 from typing import Any, Dict, Optional, Union
 
-import requests
+import requests as _requests
 from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
@@ -25,7 +25,7 @@ log = logging.getLogger("data-fetcher")
 
 
 def _init_requests_session():
-    session = requests.Session()
+    session = _requests.Session()
     retry = Retry(
         total=DEFAULT_NUM_OF_RETRIES,
         backoff_factor=0.3,
@@ -123,7 +123,7 @@ class ApiClient:
         if data:
             headers["Content-Encoding"] = "gzip"
             data = gzip.compress(json.dumps(data).encode())
-        response = requests.request(
+        response = self._requests_session.request(
             method, full_url, headers=headers, params=params, data=data, timeout=DEFAULT_TIMEOUT
         )
         if not _status_is_valid(response.status_code):
