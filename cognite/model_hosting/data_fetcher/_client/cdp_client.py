@@ -1,4 +1,5 @@
 import io
+from collections import OrderedDict
 from typing import Dict, List, Union
 from urllib.parse import quote
 
@@ -30,8 +31,7 @@ class CdpClient(ApiClient):
             "end": end,
             "includeOutsidePoints": include_outside_points,
         }
-        ts = self.get_time_series_by_id([id])[0]
-        url = "/timeseries/data/{}".format(quote(ts["name"], safe=""))
+        url = "/timeseries/{}/data".format(id)
         datapoints = []
         while (not datapoints or len(datapoints[-1]) == limit) and params["end"] > params["start"]:
             res = self.get(url, params=params)
@@ -43,7 +43,10 @@ class CdpClient(ApiClient):
             params["start"] = latest_timestamp + (utils.granularity_to_ms(granularity) if granularity else 1)
         dps = []
         [dps.extend(el) for el in datapoints]
-        df = pd.DataFrame(dps)
+        timestamps = [dp["timestamp"] for dp in dps]
+        value_name = aggregate or "value"
+        values = [dp[value_name] for dp in dps]
+        df = pd.DataFrame(OrderedDict([("timestamp", timestamps), (value_name, values)]))
         if include_outside_points:
             df.drop_duplicates(inplace=True)
         return df
@@ -73,7 +76,7 @@ class CdpClient(ApiClient):
     def get_time_series_by_id(self, ids: List[int]) -> List:
         url = "/timeseries/byids"
         body = {"items": list(set(ids))}
-        return (self.post(url, json=body, api_version="0.6")).json()["data"]["items"]
+        return (self.post(url, json=body)).json()["data"]["items"]
 
     def download_file(self, id: int, target_path: str, chunk_size: int = 2 ** 21) -> None:
         url = "/files/{}/downloadlink".format(id)

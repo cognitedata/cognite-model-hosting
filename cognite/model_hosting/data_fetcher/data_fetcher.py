@@ -196,18 +196,6 @@ class TimeSeriesFetcher:
 
         return starts.pop(), ends.pop(), granularities.pop()
 
-    def __convert_ts_names_to_aliases(self, df: pd.DataFrame) -> pd.DataFrame:
-        name_to_label = {}
-        ts_ids = [ts.id for ts in self._specs.values()]
-        time_series = self._cdp_client.get_time_series_by_id(ts_ids)
-        ts_names = {ts["id"]: ts["name"] for ts in time_series}
-        for alias, ts_spec in self._specs.items():
-            if ts_spec.aggregate:
-                name_to_label[ts_names[ts_spec.id] + "|" + ts_spec.aggregate] = alias
-            else:
-                name_to_label[ts_names[ts_spec.id]] = alias
-        return df.rename(columns=name_to_label)
-
     def fetch_dataframe(self, aliases: List[str]) -> pd.DataFrame:
         """Fetches a time-aligned dataframe of the time series specified by the provided aliases.
 
@@ -230,8 +218,8 @@ class TimeSeriesFetcher:
             time_series.append({"id": spec.id, "aggregate": spec.aggregate})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
         df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
-        df_with_alias_columns = self.__convert_ts_names_to_aliases(df)
-        return df_with_alias_columns
+        df.columns = ["timestamp"] + aliases
+        return df
 
     def _fetch_datapoints_single(self, alias):
         self._check_valid_alias(alias)

@@ -17,13 +17,8 @@ def mock_get_datapoints_successive(rsps):
         "data": {"items": [{"name": "ts", "datapoints": [{"timestamp": i, "value": i} for i in range(100000, 150000)]}]}
     }
 
-    rsps.add(
-        rsps.POST, BASE_URL_V0_6 + "/timeseries/byids", status=200, json={"data": {"items": [{"name": "ts", "id": 1}]}}
-    )
-    rsps.add(rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/data/ts?(.*start=0.*)"), status=200, json=dps_100_000)
-    rsps.add(
-        rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/data/ts?(.*start=100000.*)"), status=200, json=dps_50_000
-    )
+    rsps.add(rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/1/data?(.*start=0.*)"), status=200, json=dps_100_000)
+    rsps.add(rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/1/data?(.*start=100000.*)"), status=200, json=dps_50_000)
 
 
 def test_get_datapoints_paging(mock_get_datapoints_successive):
@@ -41,7 +36,7 @@ def mock_get_datapoints_frame_successive(rsps):
     dps_50_000_csv = pd.DataFrame(dps_50_000).to_csv(index=False)
 
     rsps.add(
-        rsps.POST, BASE_URL_V0_6 + "/timeseries/byids", status=200, json={"data": {"items": [{"name": "ts", "id": 1}]}}
+        rsps.POST, BASE_URL_V0_5 + "/timeseries/byids", status=200, json={"data": {"items": [{"name": "ts", "id": 1}]}}
     )
     rsps.add(rsps.POST, BASE_URL_V0_5 + "/timeseries/dataframe", status=200, body=dps_100_000_csv)
     rsps.add(rsps.POST, BASE_URL_V0_5 + "/timeseries/dataframe", status=200, body=dps_50_000_csv)
