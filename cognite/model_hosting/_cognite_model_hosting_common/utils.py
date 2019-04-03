@@ -105,7 +105,7 @@ def _time_interval_str_to_ms(interval_str: str):
     return ms
 
 
-def time_interval_to_ms(t: Union[int, str, timedelta]):
+def time_interval_to_ms(t: Union[int, str, timedelta], allow_zero=False, allow_inf=False):
     """Returns millisecond representation of time interval"""
     if isinstance(t, int):
         ms = t
@@ -116,8 +116,17 @@ def time_interval_to_ms(t: Union[int, str, timedelta]):
     else:
         raise TypeError("Time interval `{}` was of type {}, but must be int, str or timedelta,".format(t, type(t)))
 
-    if ms <= 0:
-        raise ValueError("Time interval has to be positive, but got {} ms".format(ms))
+    if (ms == 0 and not allow_zero) or (ms == -1 and not allow_inf) or ms < -1:
+        if allow_zero and allow_inf:
+            msg = "Time interval has to be -1, 0 or positive"
+        elif not allow_zero and allow_inf:
+            msg = "Time interval has to be -1 or positive"
+        elif allow_zero and not allow_inf:
+            msg = "Time interval has to be 0 or positive"
+        else:
+            msg = "Time interval has to be positive"
+
+        raise ValueError("{}, but got {} ms".format(msg, ms))
 
     return ms
 

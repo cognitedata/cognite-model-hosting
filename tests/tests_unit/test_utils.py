@@ -126,6 +126,28 @@ class TestTimeIntervalToMs:
         with pytest.raises(ValueError, match="positive"):
             time_interval_to_ms(time_interval)
 
+    def test_allow_zero(self):
+        time_interval_to_ms(0, allow_zero=True)
+        time_interval_to_ms("0h", allow_zero=True)
+        time_interval_to_ms(timedelta(), allow_zero=True)
+        with pytest.raises(ValueError, match="positive"):
+            time_interval_to_ms(-1)
+
+    def test_allow_inf(self):
+        time_interval_to_ms(-1, allow_inf=True)
+        time_interval_to_ms(timedelta(milliseconds=-1), allow_inf=True)
+        with pytest.raises(ValueError, match="positive"):
+            time_interval_to_ms(0)
+
+    def test_allow_zero_and_inf(self):
+        time_interval_to_ms(0, allow_zero=True, allow_inf=True)
+        time_interval_to_ms("0h", allow_zero=True, allow_inf=True)
+        time_interval_to_ms(timedelta(hours=0), allow_zero=True, allow_inf=True)
+        time_interval_to_ms(-1, allow_zero=True, allow_inf=True)
+        time_interval_to_ms(timedelta(hours=0), allow_zero=True, allow_inf=True)
+        with pytest.raises(ValueError, match="positive"):
+            time_interval_to_ms(-2)
+
 
 class TestGranularityToMs:
     @pytest.mark.parametrize(
