@@ -88,7 +88,7 @@ class TestSpecValidation:
         TestCase(
             "minimal_schedule_data_spec",
             ScheduleDataSpec(input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=1, window_size=2, start=3),
-            {"input": {}, "output": {}, "stride": 1, "windowSize": 2, "start": 3},
+            {"input": {}, "output": {}, "stride": 1, "windowSize": 2, "start": 3, "slack": 0},
         ),
         TestCase(
             "full_schedule_data_spec",
@@ -98,6 +98,7 @@ class TestSpecValidation:
                 stride=1,
                 window_size=2,
                 start=3,
+                slack=4,
             ),
             {
                 "input": {"timeSeries": {"ts1": {"id": 5}}},
@@ -105,6 +106,7 @@ class TestSpecValidation:
                 "stride": 1,
                 "windowSize": 2,
                 "start": 3,
+                "slack": 4,
             },
         ),
         TestCase(
@@ -132,6 +134,7 @@ class TestSpecValidation:
                 "stride": 60 * 60 * 1000,
                 "windowSize": 3 * 60 * 60 * 1000,
                 "start": 123 * 60 * 60 * 1000,
+                "slack": 0,
             },
         ),
     ]
@@ -397,14 +400,26 @@ class TestSpecConstructor:
         TestCase(
             name="schedule_data_spec_default_start_now",
             constructor=lambda: ScheduleDataSpec(
+                input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=123, window_size=234, slack=345
+            ),
+            primitive={"input": {}, "output": {}, "stride": 123, "windowSize": 234, "start": 10 ** 9, "slack": 345},
+        ),
+        TestCase(
+            name="schedule_data_spec_default_slack_zero",
+            constructor=lambda: ScheduleDataSpec(
                 input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=123, window_size=234
             ),
-            primitive={"input": {}, "output": {}, "stride": 123, "windowSize": 234, "start": 10 ** 9},
+            primitive={"input": {}, "output": {}, "stride": 123, "windowSize": 234, "start": 10 ** 9, "slack": 0},
         ),
         TestCase(
             name="schedule_data_spec_string_formats",
             constructor=lambda: ScheduleDataSpec(
-                input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride="1m", window_size="2m", start="2m-ago"
+                input=ScheduleInputSpec(),
+                output=ScheduleOutputSpec(),
+                stride="1m",
+                window_size="2m",
+                start="2m-ago",
+                slack="3m",
             ),
             primitive={
                 "input": {},
@@ -412,6 +427,7 @@ class TestSpecConstructor:
                 "stride": 60000,
                 "windowSize": 120000,
                 "start": 10 ** 9 - 2 * 60 * 1000,
+                "slack": 180000,
             },
         ),
         TestCase(
@@ -422,19 +438,16 @@ class TestSpecConstructor:
                 stride=timedelta(minutes=1),
                 window_size=timedelta(minutes=2),
                 start=datetime(2018, 1, 1),
+                slack=timedelta(minutes=3),
             ),
-            primitive={"input": {}, "output": {}, "stride": 60000, "windowSize": 120000, "start": 1514764800000},
-        ),
-        TestCase(
-            name="schedule_data_spec_datetime",
-            constructor=lambda: ScheduleDataSpec(
-                input=ScheduleInputSpec(),
-                output=ScheduleOutputSpec(),
-                stride=timedelta(minutes=1),
-                window_size=timedelta(minutes=2),
-                start=datetime(2018, 1, 1),
-            ),
-            primitive={"input": {}, "output": {}, "stride": 60000, "windowSize": 120000, "start": 1514764800000},
+            primitive={
+                "input": {},
+                "output": {},
+                "stride": 60000,
+                "windowSize": 120000,
+                "start": 1514764800000,
+                "slack": 180000,
+            },
         ),
     ]
 
@@ -479,3 +492,8 @@ class TestSpecWithTimeAgoFormat:
         assert 1 == len(set([(spec.start, spec.end) for spec in specs_before]))
         assert 1 == len(set([(spec.start, spec.end) for spec in specs_after]))
         assert 2 == len(set([(spec.start, spec.end) for spec in specs_before + specs_after]))
+
+
+def test_schedule_data_spec_schema_slack_missing_default_to_zero():
+    schedule_data_spec = ScheduleDataSpec.load({"input": {}, "output": {}, "stride": 1, "windowSize": 1, "start": 1})
+    assert 0 == schedule_data_spec.slack

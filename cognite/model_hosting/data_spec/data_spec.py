@@ -282,6 +282,7 @@ class ScheduleDataSpec(_BaseSpec):
         window_size (Union[int, str, timedelta]): The size of each prediction window, i.e. how long back in time a
             prediction will look. Same format as stride.
         start (Union[int, str, datetime]): When the first prediction will be made.
+        slack (Union[int, str, timedelta]): How long back in time input changes will trigger new predictions
     """
 
     def __init__(
@@ -291,12 +292,14 @@ class ScheduleDataSpec(_BaseSpec):
         stride: Union[int, str, timedelta],
         window_size: Union[int, str, timedelta],
         start: Union[int, str, datetime] = "now",
+        slack: Union[int, str, timedelta] = 0,
     ):
         self.input = input
         self.output = output
         self.stride = time_interval_to_ms(stride)
         self.window_size = time_interval_to_ms(window_size)
         self.start = self._get_start(start, input)
+        self.slack = time_interval_to_ms(slack, allow_zero=True, allow_inf=True)
 
         self.validate()
 
@@ -491,6 +494,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
     stride = fields.Int(required=True, validate=validate.Range(min=1))
     windowSize = fields.Int(required=True, attribute="window_size", validate=validate.Range(min=1))
     start = fields.Int(required=True, validate=validate.Range(min=0))
+    slack = fields.Int(missing=0, validate=validate.Range(min=-1))
 
     @staticmethod
     def _validate_aggregate_constraints(data):
