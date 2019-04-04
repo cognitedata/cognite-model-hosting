@@ -1,5 +1,6 @@
 import os
 from shutil import rmtree
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -155,30 +156,20 @@ class TestFiles:
         )
 
     def test_fetch_single(self, data_fetcher):
-        dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
-        rmtree(dir, ignore_errors=True)
-        os.makedirs(dir, exist_ok=True)
-
-        data_fetcher.files.fetch("a", directory=dir)
-        assert 1 == len(os.listdir(dir))
-        with open(os.path.join(dir, "a")) as f:
-            assert "a" == f.read()
-
-        rmtree(dir, ignore_errors=True)
+        with TemporaryDirectory() as dir:
+            data_fetcher.files.fetch("a", directory=dir)
+            assert 1 == len(os.listdir(dir))
+            with open(os.path.join(dir, "a")) as f:
+                assert "a" == f.read()
 
     def test_fetch_multiple(self, data_fetcher):
-        dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
-        rmtree(dir, ignore_errors=True)
-        os.makedirs(dir, exist_ok=True)
-
-        data_fetcher.files.fetch(["a", "b"], directory=dir)
-        assert 2 == len(os.listdir(dir))
-        with open(os.path.join(dir, "a")) as f:
-            assert "a" == f.read()
-        with open(os.path.join(dir, "b")) as f:
-            assert "b" == f.read()
-
-        rmtree(dir, ignore_errors=True)
+        with TemporaryDirectory() as dir:
+            data_fetcher.files.fetch(["a", "b"], directory=dir)
+            assert 2 == len(os.listdir(dir))
+            with open(os.path.join(dir, "a")) as f:
+                assert "a" == f.read()
+            with open(os.path.join(dir, "b")) as f:
+                assert "b" == f.read()
 
     def test_fetch_single_to_memory(self, data_fetcher):
         content = data_fetcher.files.fetch_to_memory("a")
