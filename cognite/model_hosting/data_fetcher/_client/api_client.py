@@ -15,11 +15,11 @@ from cognite.model_hosting.data_fetcher._client.utils import _status_is_valid
 from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError, DataFetcherHttpError
 
 DEFAULT_BASE_URL = "https://api.cognitedata.com"
-DEFAULT_NUM_OF_RETRIES = 3
-DEFAULT_TIMEOUT = 10
+NUM_OF_RETRIES = int(os.getenv("COGNITE_DATA_FETCHER_RETRIES", 3))
+TIMEOUT = int(os.getenv("COGNITE_DATA_FETCHER_TIMEOUT", 10))
 
 HTTP_STATUS_CODES_TO_RETRY = [429, 500, 502, 503]
-HTTP_METHODS_TO_RETRY = ["GET", "DELETE"]
+HTTP_METHODS_TO_RETRY = ["GET", "POST", "DELETE"]  # We can retry POST because we only fetch data
 
 log = logging.getLogger("data-fetcher")
 
@@ -27,10 +27,7 @@ log = logging.getLogger("data-fetcher")
 def _init_requests_session():
     session = _requests.Session()
     retry = Retry(
-        total=DEFAULT_NUM_OF_RETRIES,
-        backoff_factor=0.3,
-        status_forcelist=HTTP_STATUS_CODES_TO_RETRY,
-        raise_on_status=False,
+        total=NUM_OF_RETRIES, backoff_factor=0.3, status_forcelist=HTTP_STATUS_CODES_TO_RETRY, raise_on_status=False
     )
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("http://", adapter)
@@ -124,7 +121,7 @@ class ApiClient:
             headers["Content-Encoding"] = "gzip"
             data = gzip.compress(json.dumps(data).encode())
         response = self._requests_session.request(
-            method, full_url, headers=headers, params=params, data=data, timeout=DEFAULT_TIMEOUT
+            method, full_url, headers=headers, params=params, data=data, timeout=TIMEOUT
         )
         if not _status_is_valid(response.status_code):
             _raise_API_error(response)

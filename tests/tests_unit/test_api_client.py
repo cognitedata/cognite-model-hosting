@@ -9,7 +9,7 @@ from time import sleep
 import pytest
 import responses
 
-from cognite.model_hosting.data_fetcher._client.api_client import DEFAULT_BASE_URL, DEFAULT_NUM_OF_RETRIES, ApiClient
+from cognite.model_hosting.data_fetcher._client.api_client import DEFAULT_BASE_URL, NUM_OF_RETRIES, ApiClient
 from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError, DataFetcherHttpError
 from tests.utils import BASE_URL, BASE_URL_V0_5
 
