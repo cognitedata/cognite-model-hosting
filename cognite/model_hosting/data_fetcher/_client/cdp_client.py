@@ -1,7 +1,6 @@
 import io
 from collections import OrderedDict
 from typing import Dict, List, Union
-from urllib.parse import quote
 
 import pandas as pd
 
