@@ -1,10 +1,14 @@
+import functools
 import os
 import random
 import sys
 import threading
 import types
+from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from multiprocessing.pool import ThreadPool
 from time import sleep
+from typing import List
 
 import pytest
 import responses
@@ -167,3 +171,39 @@ def test_delete_error(mock_response_all_http_methods_400):
 
     assert "bla" == e.value.message
     assert 400 == e.value.code
+
+
+class FakeServer(BaseHTTPRequestHandler):
+    def __init__(self, method: str, return_status: int, request_history: List, *args, **kwargs):
+        def do(self):
+            self.send_response(return_status)
+            self.end_headers()
+            request_history.append(self.path)
+
+        setattr(self, "do_{}".format(method.upper()), types.MethodType(do, self))
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    @contextmanager
+    def serve(cls, method: str, return_status: int):
+        request_history = []
+        server = HTTPServer(
+            server_address=("", 4444),
+            RequestHandlerClass=functools.partial(cls, method, return_status, request_history),
+        )
+        thread = threading.Thread(target=server.serve_forever, args=(0.1,), daemon=True)
+        thread.start()
+        yield request_history
+        server.shutdown()
+        thread.join()
+
+
+def test_retry():
+    client = ApiClient()
+    client._get_full_url = lambda *args, **kwargs: "http://localhost:4444/something"
+
+    with FakeServer.serve("POST", 503) as request_history:
+        with pytest.raises(DataFetcherHttpError):
+            client.post("/any")
+
+        assert NUM_OF_RETRIES + 1 == len(request_history)
