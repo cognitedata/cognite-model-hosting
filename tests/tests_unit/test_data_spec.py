@@ -497,3 +497,9 @@ class TestSpecWithTimeAgoFormat:
 def test_schedule_data_spec_schema_slack_missing_default_to_zero():
     schedule_data_spec = ScheduleDataSpec.load({"input": {}, "output": {}, "stride": 1, "windowSize": 1, "start": 1})
     assert 0 == schedule_data_spec.slack
+
+
+def test_empty_specs_default_fields_to_empty_dict():
+    ds = ScheduleDataSpec(input=ScheduleInputSpec(), output=ScheduleOutputSpec(), stride=1, window_size=1, start=1)
+    assert {} == ds.input.time_series
+    assert {} == ds.output.time_series
