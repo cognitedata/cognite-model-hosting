@@ -21,6 +21,8 @@ BACKOFF_MAX = 30
 
 HTTP_STATUS_CODES_TO_RETRY = [429, 500, 502, 503]
 
+MAX_CONNECTION_POOL_SIZE = 16
+
 log = logging.getLogger("data-fetcher")
 
 
@@ -38,7 +40,7 @@ def _init_requests_session():
         raise_on_status=False,
         method_whitelist=False,  # Will retry on all methods since we only fetch data
     )
-    adapter = HTTPAdapter(max_retries=retry)
+    adapter = HTTPAdapter(max_retries=retry, pool_maxsize=MAX_CONNECTION_POOL_SIZE)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session

@@ -4,16 +4,17 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
+from cognite.model_hosting.data_fetcher._client.api_client import MAX_CONNECTION_POOL_SIZE
 from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
 from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
-NUMBER_OF_THREADS = 16
+_NUMBER_OF_THREADS = MAX_CONNECTION_POOL_SIZE
 
 
 def _execute_tasks_concurrently(func, tasks):
-    with ThreadPoolExecutor(NUMBER_OF_THREADS) as p:
+    with ThreadPoolExecutor(_NUMBER_OF_THREADS) as p:
         futures = [p.submit(func, *task) for task in tasks]
         return [future.result() for future in futures]
 
