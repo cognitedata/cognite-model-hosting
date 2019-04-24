@@ -264,7 +264,7 @@ class ScheduleOutputSpec(_BaseSpec):
     """
 
     def __init__(self, time_series: Dict[str, ScheduleOutputTimeSeriesSpec] = None):
-        self.time_series = time_series
+        self.time_series = time_series or {}
 
 
 class ScheduleDataSpec(_BaseSpec):
