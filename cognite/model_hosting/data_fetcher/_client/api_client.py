@@ -17,19 +17,30 @@ from cognite.model_hosting.data_fetcher.exceptions import ApiKeyError, DataFetch
 DEFAULT_BASE_URL = "https://api.cognitedata.com"
 NUM_OF_RETRIES = int(os.getenv("COGNITE_DATA_FETCHER_RETRIES", 3))
 TIMEOUT = int(os.getenv("COGNITE_DATA_FETCHER_TIMEOUT", 10))
+BACKOFF_MAX = 30
 
 HTTP_STATUS_CODES_TO_RETRY = [429, 500, 502, 503]
-HTTP_METHODS_TO_RETRY = ["GET", "POST", "DELETE"]  # We can retry POST because we only fetch data
+
+MAX_CONNECTION_POOL_SIZE = 16
 
 log = logging.getLogger("data-fetcher")
 
 
+class RetryWithMaxBackoff(Retry):
+    def get_backoff_time(self):
+        return min(BACKOFF_MAX, super().get_backoff_time())
+
+
 def _init_requests_session():
     session = _requests.Session()
-    retry = Retry(
-        total=NUM_OF_RETRIES, backoff_factor=0.3, status_forcelist=HTTP_STATUS_CODES_TO_RETRY, raise_on_status=False
+    retry = RetryWithMaxBackoff(
+        total=NUM_OF_RETRIES,
+        backoff_factor=0.3,
+        status_forcelist=HTTP_STATUS_CODES_TO_RETRY,
+        raise_on_status=False,
+        method_whitelist=False,  # Will retry on all methods since we only fetch data
     )
-    adapter = HTTPAdapter(max_retries=retry)
+    adapter = HTTPAdapter(max_retries=retry, pool_maxsize=MAX_CONNECTION_POOL_SIZE)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session
