@@ -188,22 +188,29 @@ class FakeServer(BaseHTTPRequestHandler):
     def serve(cls, method: str, return_status: int):
         request_history = []
         server = HTTPServer(
-            server_address=("", 4444),
-            RequestHandlerClass=functools.partial(cls, method, return_status, request_history),
+            server_address=("", 0), RequestHandlerClass=functools.partial(cls, method, return_status, request_history)
         )
         thread = threading.Thread(target=server.serve_forever, args=(0.1,), daemon=True)
         thread.start()
-        yield request_history
+        yield request_history, server.server_port
         server.shutdown()
         thread.join()
 
 
 def test_retry():
-    client = ApiClient()
-    client._get_full_url = lambda *args, **kwargs: "http://localhost:4444/something"
 
-    with FakeServer.serve("POST", 503) as request_history:
+    with FakeServer.serve("POST", 503) as (request_history, server_port):
+        client = ApiClient()
+        client._get_full_url = lambda *args, **kwargs: "http://localhost:{}/something".format(server_port)
         with pytest.raises(DataFetcherHttpError):
             client.post("/any")
+
+        assert NUM_OF_RETRIES + 1 == len(request_history)
+
+    with FakeServer.serve("GET", 503) as (request_history, server_port):
+        client = ApiClient()
+        client._get_full_url = lambda *args, **kwargs: "http://localhost:{}/something".format(server_port)
+        with pytest.raises(DataFetcherHttpError):
+            client.get("/any")
 
         assert NUM_OF_RETRIES + 1 == len(request_history)
