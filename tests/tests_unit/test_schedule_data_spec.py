@@ -56,7 +56,10 @@ def test_get_instances():
     for i in range(0, 5 * 60000, 60000):
         time_series_spec1 = TimeSeriesSpec(id=1, start=i, end=i + 60000)
         time_series_spec2 = TimeSeriesSpec(id=2, start=i, end=i + 60000)
-        data_spec = DataSpec(time_series={"ts1": time_series_spec1, "ts2": time_series_spec2})
+        data_spec = DataSpec(
+            time_series={"ts1": time_series_spec1, "ts2": time_series_spec2},
+            metadata={"start": i, "end": i + 60000, "windowSize": 60000, "stride": 60000},
+        )
         expected_data_specs.append(data_spec)
 
     assert len(expected_data_specs) == len(data_specs)

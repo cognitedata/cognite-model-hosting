@@ -61,6 +61,26 @@ class TestSpecValidation:
                 "files": {"f1": {"id": 3}, "f2": {"id": 4}},
             },
         ),
+        TestCase("data_spec_with_metadata", DataSpec(metadata={"bla": "bla"}), {"metadata": {"bla": "bla"}}),
+        TestCase(
+            "full_data_spec_with_metadata",
+            DataSpec(
+                time_series={
+                    "ts1": TimeSeriesSpec(id=6, start=123, end=234),
+                    "ts2": TimeSeriesSpec(id=7, start=1234, end=2345),
+                },
+                files={"f1": FileSpec(id=3), "f2": FileSpec(id=4)},
+                metadata={"key1": "value", "key2": 1},
+            ),
+            {
+                "timeSeries": {
+                    "ts1": {"id": 6, "start": 123, "end": 234},
+                    "ts2": {"id": 7, "start": 1234, "end": 2345},
+                },
+                "files": {"f1": {"id": 3}, "f2": {"id": 4}},
+                "metadata": {"key1": "value", "key2": 1},
+            },
+        ),
         TestCase("minimal_schedule_input_spec", ScheduleInputSpec(), {}),
         TestCase(
             "full_schedule_input_spec",
@@ -222,6 +242,13 @@ class TestSpecValidation:
             constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
             primitive={"files": {"f1": {}}},
             errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
+        ),
+        InvalidTestCase(
+            name="data_spec_with_metadata_invalid_type",
+            type=DataSpec,
+            constructor=lambda: DataSpec(metadata={"keybla": ["valuebla"]}),
+            primitive={"metadata": {"keybla": ["valuebla"]}},
+            errors={"metadata": {"keybla": {"value": ["Invalid metadata value, must be string or number."]}}},
         ),
         InvalidTestCase(
             name="data_spec_invalid_alias",

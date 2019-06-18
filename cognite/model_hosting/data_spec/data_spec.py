@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import datetime, timedelta
+from numbers import Number
 from typing import Dict, List, Union
 
 from marshmallow import (
@@ -167,11 +168,18 @@ class DataSpec(_BaseSpec):
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
         files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
+        metadata (Dict[str, Number]): A dictionary mapping of arbitrary metadata.
     """
 
-    def __init__(self, time_series: Dict[str, TimeSeriesSpec] = None, files: Dict[str, FileSpec] = None):
+    def __init__(
+        self,
+        time_series: Dict[str, TimeSeriesSpec] = None,
+        files: Dict[str, FileSpec] = None,
+        metadata: Dict[str, Union[str, Number]] = None,
+    ):
         self.time_series = time_series or {}
         self.files = files or {}
+        self.metadata = metadata or {}
         self.validate()
 
 
@@ -348,7 +356,12 @@ class ScheduleDataSpec(_BaseSpec):
                 )
                 for alias, spec in self.input.time_series.items()
             }
-            data_specs.append(DataSpec(time_series=time_series_specs))
+            data_specs.append(
+                DataSpec(
+                    time_series=time_series_specs,
+                    metadata={"start": start, "end": end, "windowSize": self.window_size, "stride": self.stride},
+                )
+            )
         return data_specs
 
     def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[int]:
@@ -409,6 +422,15 @@ class AliasField(fields.String):
             )
 
 
+class MetadataValueField(fields.Field):
+    def __init__(self):
+        super().__init__(required=True, validate=self.__validate)
+
+    def __validate(self, field_name):
+        if not isinstance(field_name, (str, Number)):
+            raise ValidationError("Invalid metadata value, must be string or number.")
+
+
 class _TimeSeriesSpecSchema(_BaseSchema):
     _default_spec = TimeSeriesSpec
 
@@ -458,6 +480,7 @@ class _DataSpecSchema(_BaseSchema):
 
     timeSeries = fields.Dict(keys=AliasField(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
     files = fields.Dict(keys=AliasField(), values=fields.Nested(_FileSpecSchema))
+    metadata = fields.Dict(keys=fields.String(), values=MetadataValueField())
 
 
 class _ScheduleInputDataSpecSchema(_BaseSchema):
