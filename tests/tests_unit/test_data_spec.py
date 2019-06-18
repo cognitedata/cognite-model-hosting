@@ -248,7 +248,15 @@ class TestSpecValidation:
             type=DataSpec,
             constructor=lambda: DataSpec(metadata={"keybla": ["valuebla"]}),
             primitive={"metadata": {"keybla": ["valuebla"]}},
-            errors={"metadata": {"keybla": {"value": ["Invalid metadata value, must be string or number."]}}},
+            errors={
+                "metadata": {
+                    "keybla": {
+                        "value": [
+                            "Invalid metadata value type '<class 'list'>'. Must be one of (<class 'str'>, <class 'numbers.Number'>)."
+                        ]
+                    }
+                }
+            },
         ),
         InvalidTestCase(
             name="data_spec_invalid_alias",

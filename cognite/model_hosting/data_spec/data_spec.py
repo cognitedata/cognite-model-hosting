@@ -426,9 +426,12 @@ class MetadataValueField(fields.Field):
     def __init__(self):
         super().__init__(required=True, validate=self.__validate)
 
-    def __validate(self, field_name):
-        if not isinstance(field_name, (str, Number)):
-            raise ValidationError("Invalid metadata value, must be string or number.")
+    def __validate(self, value):
+        valid_types = (str, Number)
+        if not isinstance(value, valid_types):
+            raise ValidationError(
+                "Invalid metadata value type '{}'. Must be one of {}.".format(type(value), valid_types)
+            )
 
 
 class _TimeSeriesSpecSchema(_BaseSchema):
