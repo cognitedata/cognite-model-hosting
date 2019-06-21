@@ -1,5 +1,6 @@
 from .data_spec import (
     DataSpec,
+    DataSpecMetadata,
     FileSpec,
     ScheduleDataSpec,
     ScheduleInputSpec,

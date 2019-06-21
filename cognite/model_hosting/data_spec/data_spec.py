@@ -1,7 +1,6 @@
 import json
 import re
 from datetime import datetime, timedelta
-from numbers import Number
 from typing import Dict, List, Optional, Union
 
 from marshmallow import (
