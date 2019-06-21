@@ -186,7 +186,7 @@ class DataSpec(_BaseSpec):
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
         files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
-        metadata (DataSpecMetadata): A dictionary mapping of arbitrary metadata.
+        metadata (DataSpecMetadata): An object containing metadata about the data spec.
     """
 
     def __init__(
