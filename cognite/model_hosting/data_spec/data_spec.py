@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from numbers import Number
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from marshmallow import (
     RAISE,
@@ -158,6 +158,24 @@ class FileSpec(_BaseSpec):
         self.id = id
 
 
+class DataSpecMetadata(_BaseSpec):
+    """Creates a data spec metadata object.
+
+    Args:
+        stride (int): The interval at which predictions will be made. Represented in ms.
+        window_size (int): The size of each prediction window, i.e. how long back in time a
+            prediction will look. Represented in ms.
+        start (int): The start of the window which this data spec describes (ms since epoch).
+        end (int): The end of the window which this data spec describes (ms since epoch).
+    """
+
+    def __init__(self, stride: int, window_size: int, start: int, end: int):
+        self.stride = stride
+        self.window_size = window_size
+        self.start = start
+        self.end = end
+
+
 class DataSpec(_BaseSpec):
     """Creates a DataSpec.
 
@@ -168,18 +186,18 @@ class DataSpec(_BaseSpec):
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
         files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
-        metadata (Dict[str, Number]): A dictionary mapping of arbitrary metadata.
+        metadata (DataSpecMetadata): A dictionary mapping of arbitrary metadata.
     """
 
     def __init__(
         self,
-        time_series: Dict[str, TimeSeriesSpec] = None,
-        files: Dict[str, FileSpec] = None,
-        metadata: Dict[str, Union[str, Number]] = None,
+        time_series: Optional[Dict[str, TimeSeriesSpec]] = None,
+        files: Optional[Dict[str, FileSpec]] = None,
+        metadata: Optional[DataSpecMetadata] = None,
     ):
         self.time_series = time_series or {}
         self.files = files or {}
-        self.metadata = metadata or {}
+        self.metadata = metadata
         self.validate()
 
 
@@ -359,7 +377,7 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(
                 DataSpec(
                     time_series=time_series_specs,
-                    metadata={"start": start, "end": end, "windowSize": self.window_size, "stride": self.stride},
+                    metadata=DataSpecMetadata(stride=self.stride, window_size=self.window_size, start=start, end=end),
                 )
             )
         return data_specs
@@ -422,18 +440,6 @@ class AliasField(fields.String):
             )
 
 
-class MetadataValueField(fields.Field):
-    def __init__(self):
-        super().__init__(required=True, validate=self.__validate)
-
-    def __validate(self, value):
-        valid_types = (str, Number)
-        if not isinstance(value, valid_types):
-            raise ValidationError(
-                "Invalid metadata value type '{}'. Must be one of {}.".format(type(value), valid_types)
-            )
-
-
 class _TimeSeriesSpecSchema(_BaseSchema):
     _default_spec = TimeSeriesSpec
 
@@ -478,12 +484,21 @@ class _FileSpecSchema(_BaseSchema):
     id = fields.Int(required=True)
 
 
+class _DataSpecMetadataSchema(_BaseSchema):
+    _default_spec = DataSpecMetadata
+
+    stride = fields.Int(required=True)
+    windowSize = fields.Int(required=True, attribute="window_size")
+    start = fields.Int(required=True)
+    end = fields.Int(required=True)
+
+
 class _DataSpecSchema(_BaseSchema):
     _default_spec = DataSpec
 
     timeSeries = fields.Dict(keys=AliasField(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
     files = fields.Dict(keys=AliasField(), values=fields.Nested(_FileSpecSchema))
-    metadata = fields.Dict(keys=fields.String(), values=MetadataValueField())
+    metadata = fields.Nested(_DataSpecMetadataSchema)
 
 
 class _ScheduleInputDataSpecSchema(_BaseSchema):
@@ -553,6 +568,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
 ScheduleInputTimeSeriesSpec._schema = _TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))
 FileSpec._schema = _FileSpecSchema()
+DataSpecMetadata._schema = _DataSpecMetadataSchema()
 DataSpec._schema = _DataSpecSchema()
 ScheduleInputSpec._schema = _ScheduleInputDataSpecSchema()
 ScheduleOutputTimeSeriesSpec._schema = _ScheduleOutputTimeSeriesSpecSchema()

@@ -16,6 +16,7 @@ from cognite.model_hosting.data_spec import (
     ScheduleOutputTimeSeriesSpec,
     TimeSeriesSpec,
 )
+from cognite.model_hosting.data_spec.data_spec import DataSpecMetadata
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
 
@@ -61,7 +62,11 @@ class TestSpecValidation:
                 "files": {"f1": {"id": 3}, "f2": {"id": 4}},
             },
         ),
-        TestCase("data_spec_with_metadata", DataSpec(metadata={"bla": "bla"}), {"metadata": {"bla": "bla"}}),
+        TestCase(
+            "data_spec_with_metadata",
+            DataSpec(metadata=DataSpecMetadata(stride=1, window_size=1, start=1, end=2)),
+            {"metadata": {"stride": 1, "windowSize": 1, "start": 1, "end": 2}},
+        ),
         TestCase(
             "full_data_spec_with_metadata",
             DataSpec(
@@ -70,7 +75,7 @@ class TestSpecValidation:
                     "ts2": TimeSeriesSpec(id=7, start=1234, end=2345),
                 },
                 files={"f1": FileSpec(id=3), "f2": FileSpec(id=4)},
-                metadata={"key1": "value", "key2": 1},
+                metadata=DataSpecMetadata(stride=1, window_size=1, start=1, end=2),
             ),
             {
                 "timeSeries": {
@@ -78,7 +83,7 @@ class TestSpecValidation:
                     "ts2": {"id": 7, "start": 1234, "end": 2345},
                 },
                 "files": {"f1": {"id": 3}, "f2": {"id": 4}},
-                "metadata": {"key1": "value", "key2": 1},
+                "metadata": {"stride": 1, "windowSize": 1, "start": 1, "end": 2},
             },
         ),
         TestCase("minimal_schedule_input_spec", ScheduleInputSpec(), {}),
@@ -246,17 +251,9 @@ class TestSpecValidation:
         InvalidTestCase(
             name="data_spec_with_metadata_invalid_type",
             type=DataSpec,
-            constructor=lambda: DataSpec(metadata={"keybla": ["valuebla"]}),
-            primitive={"metadata": {"keybla": ["valuebla"]}},
-            errors={
-                "metadata": {
-                    "keybla": {
-                        "value": [
-                            "Invalid metadata value type '<class 'list'>'. Must be one of (<class 'str'>, <class 'numbers.Number'>)."
-                        ]
-                    }
-                }
-            },
+            constructor=lambda: DataSpec(metadata=DataSpecMetadata(stride="1m", window_size=1, start=1, end=1)),
+            primitive={"metadata": {"stride": "1m", "windowSize": 1, "start": 1, "end": 1}},
+            errors={"metadata": {"stride": ["Not a valid integer."]}},
         ),
         InvalidTestCase(
             name="data_spec_invalid_alias",

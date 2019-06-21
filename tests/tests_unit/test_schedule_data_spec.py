@@ -13,7 +13,7 @@ from cognite.model_hosting.data_spec import (
     ScheduleOutputSpec,
     TimeSeriesSpec,
 )
-from cognite.model_hosting.data_spec.data_spec import _ScheduleDataSpecSchema
+from cognite.model_hosting.data_spec.data_spec import DataSpecMetadata, _ScheduleDataSpecSchema
 
 
 class TestCalculateWindowIntervals:
@@ -58,7 +58,7 @@ def test_get_instances():
         time_series_spec2 = TimeSeriesSpec(id=2, start=i, end=i + 60000)
         data_spec = DataSpec(
             time_series={"ts1": time_series_spec1, "ts2": time_series_spec2},
-            metadata={"start": i, "end": i + 60000, "windowSize": 60000, "stride": 60000},
+            metadata=DataSpecMetadata(start=i, end=i + 60000, window_size=60000, stride=60000),
         )
         expected_data_specs.append(data_spec)
 
