@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 
 from marshmallow import (
-    RAISE,
+    EXCLUDE,
     Schema,
     ValidationError,
     fields,
@@ -415,7 +415,7 @@ class _BaseSchema(Schema):
         super().__init__(*args, **kwargs)
 
     class Meta:
-        unknown = RAISE
+        unknown = EXCLUDE
 
     @post_dump
     def remove_none(self, data):
