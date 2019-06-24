@@ -16,7 +16,7 @@ from cognite.model_hosting.data_spec import (
     ScheduleOutputTimeSeriesSpec,
     TimeSeriesSpec,
 )
-from cognite.model_hosting.data_spec.data_spec import DataSpecMetadata
+from cognite.model_hosting.data_spec.data_spec import DataSpecMetadata, ScheduleSettings
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
 
@@ -64,8 +64,8 @@ class TestSpecValidation:
         ),
         TestCase(
             "data_spec_with_metadata",
-            DataSpec(metadata=DataSpecMetadata(stride=1, window_size=1, start=1, end=2)),
-            {"metadata": {"stride": 1, "windowSize": 1, "start": 1, "end": 2}},
+            DataSpec(metadata=DataSpecMetadata(ScheduleSettings(stride=1, window_size=1, start=1, end=2))),
+            {"metadata": {"scheduleSettings": {"stride": 1, "windowSize": 1, "start": 1, "end": 2}}},
         ),
         TestCase(
             "full_data_spec_with_metadata",
@@ -75,7 +75,7 @@ class TestSpecValidation:
                     "ts2": TimeSeriesSpec(id=7, start=1234, end=2345),
                 },
                 files={"f1": FileSpec(id=3), "f2": FileSpec(id=4)},
-                metadata=DataSpecMetadata(stride=1, window_size=1, start=1, end=2),
+                metadata=DataSpecMetadata(ScheduleSettings(stride=1, window_size=1, start=1, end=2)),
             ),
             {
                 "timeSeries": {
@@ -83,7 +83,7 @@ class TestSpecValidation:
                     "ts2": {"id": 7, "start": 1234, "end": 2345},
                 },
                 "files": {"f1": {"id": 3}, "f2": {"id": 4}},
-                "metadata": {"stride": 1, "windowSize": 1, "start": 1, "end": 2},
+                "metadata": {"scheduleSettings": {"stride": 1, "windowSize": 1, "start": 1, "end": 2}},
             },
         ),
         TestCase("minimal_schedule_input_spec", ScheduleInputSpec(), {}),
@@ -251,9 +251,11 @@ class TestSpecValidation:
         InvalidTestCase(
             name="data_spec_with_metadata_invalid_type",
             type=DataSpec,
-            constructor=lambda: DataSpec(metadata=DataSpecMetadata(stride="1m", window_size=1, start=1, end=1)),
-            primitive={"metadata": {"stride": "1m", "windowSize": 1, "start": 1, "end": 1}},
-            errors={"metadata": {"stride": ["Not a valid integer."]}},
+            constructor=lambda: DataSpec(
+                metadata=DataSpecMetadata(ScheduleSettings(stride="1m", window_size=1, start=1, end=1))
+            ),
+            primitive={"metadata": {"scheduleSettings": {"stride": "1m", "windowSize": 1, "start": 1, "end": 1}}},
+            errors={"metadata": {"scheduleSettings": {"stride": ["Not a valid integer."]}}},
         ),
         InvalidTestCase(
             name="data_spec_invalid_alias",
@@ -289,13 +291,6 @@ class TestSpecValidation:
         #     primitive={"stride": "1m", "windowSize": "5m", "timeSeries": {"ts1": {"id": "abc"}}},
         #     errors={"timeSeries": {"ts1": {"value": {"id": ["Not a valid integer."]}}}},
         # ),
-        InvalidTestCase(
-            name="schedule_input_time_series_with_start_end",
-            type=ScheduleInputTimeSeriesSpec,
-            constructor=None,
-            primitive={"id": 6, "start": 123, "end": 234},
-            errors={"start": ["Unknown field."], "end": ["Unknown field."]},
-        ),
         InvalidTestCase(
             name="schedule_output_time_series_spec_missing_fields",
             type=ScheduleOutputTimeSeriesSpec,
@@ -365,6 +360,19 @@ class TestSpecValidation:
         assert from_json == obj, "\nFrom JSON: ({})\n{}\nObj:({})\n{}\n".format(
             type(from_json), from_json, type(obj), obj
         )
+
+    def test_load_with_unknown_fields(self):
+        primitive = {
+            "timeSeries": {"ts1": {"id": 6, "start": 123, "end": 234}, "ts2": {"id": 7, "start": 1234, "end": 2345}},
+            "files": {"f1": {"id": 3}, "f2": {"id": 4}},
+            "metadata": {"scheduleSettings": {"stride": 1, "windowSize": 1, "start": 1, "end": 2}},
+            "unkown_field": "blabla",
+        }
+        ds = DataSpec.load(primitive)
+        assert {"ts1", "ts2"} == set(ds.time_series.keys())
+        assert {"f1", "f2"} == set(ds.files.keys())
+        assert {"stride": 1, "windowSize": 1, "start": 1, "end": 2} == ds.metadata.schedule_settings.dump()
+        assert "unkown_field" not in ds.dump()
 
     def remove_defaultdict_in_errors(self, d):
         return json.loads(json.dumps(d))

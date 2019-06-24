@@ -157,8 +157,8 @@ class FileSpec(_BaseSpec):
         self.id = id
 
 
-class DataSpecMetadata(_BaseSpec):
-    """Creates a data spec metadata object.
+class ScheduleSettings(_BaseSpec):
+    """Creates a schedule settings object.
 
     Args:
         stride (int): The interval at which predictions will be made. Represented in ms.
@@ -173,6 +173,17 @@ class DataSpecMetadata(_BaseSpec):
         self.window_size = window_size
         self.start = start
         self.end = end
+
+
+class DataSpecMetadata(_BaseSpec):
+    """Creates a data spec metadata object.
+
+    Args:
+        schedule_settings (Optional[ScheduleSettings]): Information about the schedule which produced this data spec.
+    """
+
+    def __init__(self, schedule_settings: Optional[ScheduleSettings] = None):
+        self.schedule_settings = schedule_settings
 
 
 class DataSpec(_BaseSpec):
@@ -376,7 +387,9 @@ class ScheduleDataSpec(_BaseSpec):
             data_specs.append(
                 DataSpec(
                     time_series=time_series_specs,
-                    metadata=DataSpecMetadata(stride=self.stride, window_size=self.window_size, start=start, end=end),
+                    metadata=DataSpecMetadata(
+                        ScheduleSettings(stride=self.stride, window_size=self.window_size, start=start, end=end)
+                    ),
                 )
             )
         return data_specs
@@ -483,13 +496,19 @@ class _FileSpecSchema(_BaseSchema):
     id = fields.Int(required=True)
 
 
-class _DataSpecMetadataSchema(_BaseSchema):
-    _default_spec = DataSpecMetadata
+class _ScheduleSettingsSchema(_BaseSchema):
+    _default_spec = ScheduleSettings
 
     stride = fields.Int(required=True)
     windowSize = fields.Int(required=True, attribute="window_size")
     start = fields.Int(required=True)
     end = fields.Int(required=True)
+
+
+class _DataSpecMetadataSchema(_BaseSchema):
+    _default_spec = DataSpecMetadata
+
+    scheduleSettings = fields.Nested(_ScheduleSettingsSchema, attribute="schedule_settings")
 
 
 class _DataSpecSchema(_BaseSchema):
@@ -567,6 +586,7 @@ class _ScheduleDataSpecSchema(_BaseSchema):
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
 ScheduleInputTimeSeriesSpec._schema = _TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))
 FileSpec._schema = _FileSpecSchema()
+ScheduleSettings._schema = _ScheduleSettingsSchema()
 DataSpecMetadata._schema = _DataSpecMetadataSchema()
 DataSpec._schema = _DataSpecSchema()
 ScheduleInputSpec._schema = _ScheduleInputDataSpecSchema()
