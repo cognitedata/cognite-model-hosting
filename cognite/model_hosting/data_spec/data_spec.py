@@ -1,10 +1,10 @@
 import json
 import re
 from datetime import datetime, timedelta
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from marshmallow import (
-    RAISE,
+    EXCLUDE,
     Schema,
     ValidationError,
     fields,
@@ -157,6 +157,35 @@ class FileSpec(_BaseSpec):
         self.id = id
 
 
+class ScheduleSettings(_BaseSpec):
+    """Creates a schedule settings object.
+
+    Args:
+        stride (int): The interval at which predictions will be made. Represented in ms.
+        window_size (int): The size of each prediction window, i.e. how long back in time a
+            prediction will look. Represented in ms.
+        start (int): The start of the window which this data spec describes (ms since epoch).
+        end (int): The end of the window which this data spec describes (ms since epoch).
+    """
+
+    def __init__(self, stride: int, window_size: int, start: int, end: int):
+        self.stride = stride
+        self.window_size = window_size
+        self.start = start
+        self.end = end
+
+
+class DataSpecMetadata(_BaseSpec):
+    """Creates a data spec metadata object.
+
+    Args:
+        schedule_settings (Optional[ScheduleSettings]): Information about the schedule which produced this data spec.
+    """
+
+    def __init__(self, schedule_settings: Optional[ScheduleSettings] = None):
+        self.schedule_settings = schedule_settings
+
+
 class DataSpec(_BaseSpec):
     """Creates a DataSpec.
 
@@ -167,11 +196,18 @@ class DataSpec(_BaseSpec):
     Args:
         time_series (Dict[str, TimeSeriesSpec]): A dictionary mapping aliases to TimeSeriesSpecs.
         files (Dict[str, FileSpec]): A dicionary mapping aliases to FileSpecs.
+        metadata (DataSpecMetadata): An object containing metadata about the data spec.
     """
 
-    def __init__(self, time_series: Dict[str, TimeSeriesSpec] = None, files: Dict[str, FileSpec] = None):
+    def __init__(
+        self,
+        time_series: Optional[Dict[str, TimeSeriesSpec]] = None,
+        files: Optional[Dict[str, FileSpec]] = None,
+        metadata: Optional[DataSpecMetadata] = None,
+    ):
         self.time_series = time_series or {}
         self.files = files or {}
+        self.metadata = metadata
         self.validate()
 
 
@@ -348,7 +384,14 @@ class ScheduleDataSpec(_BaseSpec):
                 )
                 for alias, spec in self.input.time_series.items()
             }
-            data_specs.append(DataSpec(time_series=time_series_specs))
+            data_specs.append(
+                DataSpec(
+                    time_series=time_series_specs,
+                    metadata=DataSpecMetadata(
+                        ScheduleSettings(stride=self.stride, window_size=self.window_size, start=start, end=end)
+                    ),
+                )
+            )
         return data_specs
 
     def get_execution_timestamps(self, start: Union[int, str, datetime], end: Union[int, str, datetime]) -> List[int]:
@@ -385,7 +428,7 @@ class _BaseSchema(Schema):
         super().__init__(*args, **kwargs)
 
     class Meta:
-        unknown = RAISE
+        unknown = EXCLUDE
 
     @post_dump
     def remove_none(self, data):
@@ -453,11 +496,27 @@ class _FileSpecSchema(_BaseSchema):
     id = fields.Int(required=True)
 
 
+class _ScheduleSettingsSchema(_BaseSchema):
+    _default_spec = ScheduleSettings
+
+    stride = fields.Int(required=True)
+    windowSize = fields.Int(required=True, attribute="window_size")
+    start = fields.Int(required=True)
+    end = fields.Int(required=True)
+
+
+class _DataSpecMetadataSchema(_BaseSchema):
+    _default_spec = DataSpecMetadata
+
+    scheduleSettings = fields.Nested(_ScheduleSettingsSchema, attribute="schedule_settings")
+
+
 class _DataSpecSchema(_BaseSchema):
     _default_spec = DataSpec
 
     timeSeries = fields.Dict(keys=AliasField(), values=fields.Nested(_TimeSeriesSpecSchema), attribute="time_series")
     files = fields.Dict(keys=AliasField(), values=fields.Nested(_FileSpecSchema))
+    metadata = fields.Nested(_DataSpecMetadataSchema)
 
 
 class _ScheduleInputDataSpecSchema(_BaseSchema):
@@ -527,6 +586,8 @@ class _ScheduleDataSpecSchema(_BaseSchema):
 TimeSeriesSpec._schema = _TimeSeriesSpecSchema()
 ScheduleInputTimeSeriesSpec._schema = _TimeSeriesSpecSchema(spec=ScheduleInputTimeSeriesSpec, exclude=("start", "end"))
 FileSpec._schema = _FileSpecSchema()
+ScheduleSettings._schema = _ScheduleSettingsSchema()
+DataSpecMetadata._schema = _DataSpecMetadataSchema()
 DataSpec._schema = _DataSpecSchema()
 ScheduleInputSpec._schema = _ScheduleInputDataSpecSchema()
 ScheduleOutputTimeSeriesSpec._schema = _ScheduleOutputTimeSeriesSpecSchema()

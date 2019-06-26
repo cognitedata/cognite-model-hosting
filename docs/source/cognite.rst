@@ -33,6 +33,11 @@ Data Spec
     :member-order: bysource
     :inherited-members:
 
+.. autoclass:: cognite.model_hosting.data_spec.DataSpecMetadata
+    :members:
+    :member-order: bysource
+    :inherited-members:
+
 Time Series Spec
 ^^^^^^^^^^^^^^^^
 .. autoclass:: cognite.model_hosting.data_spec.TimeSeriesSpec
