@@ -14,6 +14,6 @@ setup(
     author="Nils Barlaug",
     author_email="nils.barlaug@cognite.com",
     packages=["cognite.model_hosting." + p for p in find_packages(where="cognite/model_hosting")],
-    install_requires=["pandas", "marshmallow==3.0.0rc4", "requests>=2.21.0,<3.0.0"],
+    install_requires=["cognite-sdk==1.*", "marshmallow==3.0.0rc4"],
     python_requires=">=3.5",
 )
