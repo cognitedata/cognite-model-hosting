@@ -34,7 +34,7 @@ def test_get_data_spec():
 class TestFileFetcher:
     @pytest.fixture(scope="class")
     def file_specs(self):
-        return {"f1": FileSpec(id=123), "f2": FileSpec(id=234)}
+        return {"f1": FileSpec(id=123), "f2": FileSpec(external_id="abc")}
 
     @pytest.fixture
     def data_fetcher(self, file_specs, rsps):
@@ -92,6 +92,13 @@ class TestFileFetcher:
     def test_fetch_single_file(self, mock_file_download, data_fetcher, directory):
         data_fetcher.files.fetch(alias="f1", directory=directory)
         file_path = os.path.join(directory or os.getcwd(), "f1")
+
+        self.assert_file_exists_and_has_content(file_path, b"blablabla")
+
+    @pytest.mark.parametrize("directory", [None, "/tmp"])
+    def test_fetch_single_file_external_id(self, mock_file_download, data_fetcher, directory):
+        data_fetcher.files.fetch(alias="f2", directory=directory)
+        file_path = os.path.join(directory or os.getcwd(), "f2")
 
         self.assert_file_exists_and_has_content(file_path, b"blablabla")
 
@@ -236,8 +243,9 @@ class TestTimeSeries:
             data_fetcher.time_series.fetch_datapoints(123)
 
     def test_fetch_datapoints_single(self, data_fetcher, cdp_client_mock):
-        def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
+        def get_datapoints_frame_single(id, external_id, start, end, aggregate, granularity, include_outside_points):
             assert id == 1234
+            assert external_id is None
             assert start == 3000
             assert end == 5000
             assert aggregate == "average"

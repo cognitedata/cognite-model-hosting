@@ -109,13 +109,13 @@ class FileFetcher:
         raise TypeError("alias must be of type str or list, was {}".format(type(alias)))
 
     def _download_single_file(self, alias: str, directory: str):
-        file_id = self.get_spec(alias).id
+        spec = self.get_spec(alias)
         file_path = os.path.join(directory, alias)
-        self._cdp_client.download_file(file_id, file_path)
+        self._cdp_client.download_file(id=spec.id, external_id=spec.external_id, target_path=file_path)
 
     def _download_single_file_to_memory(self, alias):
-        file_id = self.get_spec(alias).id
-        return {alias: self._cdp_client.download_file_to_memory(file_id)}
+        spec = self.get_spec(alias)
+        return {alias: self._cdp_client.download_file_to_memory(id=spec.id, external_id=spec.external_id)}
 
 
 class TimeSeriesFetcher:

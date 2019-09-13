@@ -154,10 +154,12 @@ class FileSpec(_BaseSpec):
 
     Args:
         id (int): The id of the file.
+        external_id (str): The external id of the file.
     """
 
-    def __init__(self, id: int):
+    def __init__(self, id: int = None, external_id: str = None):
         self.id = id
+        self.external_id = external_id
 
 
 class ScheduleSettings(_BaseSpec):
@@ -516,7 +518,17 @@ class _TimeSeriesSpecSchema(_BaseSchema):
 class _FileSpecSchema(_BaseSchema):
     _default_spec = FileSpec
 
-    id = fields.Int(required=True)
+    id = fields.Int()
+    externalId = fields.Str(attribute="external_id")
+
+    @validates_schema(skip_on_field_errors=False)
+    def validate_identifiers(self, data):
+        errors = {}
+        if ("id" in data and "external_id" in data) or ("id" not in data and "external_id" not in data):
+            errors["external_id"] = ["Exactly one of id and external_id must be specified."]
+            errors["id"] = ["Exactly one of id and external_id must be specified."]
+        if errors:
+            raise ValidationError(errors)
 
 
 class _ScheduleSettingsSchema(_BaseSchema):

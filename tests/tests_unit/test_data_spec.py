@@ -26,6 +26,7 @@ class TestSpecValidation:
 
     valid_test_cases = [
         TestCase("minimal_file_spec", FileSpec(id=6), {"id": 6}),
+        TestCase("minimal_file_spec_external_id", FileSpec(external_id="abc"), {"externalId": "abc"}),
         TestCase(
             "minimal_time_series_spec", TimeSeriesSpec(id=6, start=123, end=234), {"id": 6, "start": 123, "end": 234}
         ),
@@ -181,11 +182,24 @@ class TestSpecValidation:
 
     invalid_test_cases = [
         InvalidTestCase(
-            name="file_missing_id",
+            name="file_missing_identifier",
             type=FileSpec,
-            constructor=lambda: FileSpec(id=None),
+            constructor=lambda: FileSpec(),
             primitive={},
-            errors={"id": ["Missing data for required field."]},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="file_spec_id_and_external_id_specified",
+            type=FileSpec,
+            constructor=lambda: FileSpec(id=1, external_id="abc"),
+            primitive={"id": 1, "externalId": "abc"},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
         ),
         InvalidTestCase(
             name="time_series_missing_id_and_external_id",
@@ -275,7 +289,16 @@ class TestSpecValidation:
             type=DataSpec,
             constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
             primitive={"files": {"f1": {}}},
-            errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
+            errors={
+                "files": {
+                    "f1": {
+                        "value": {
+                            "external_id": ["Exactly one of id and external_id must be specified."],
+                            "id": ["Exactly one of id and external_id must be specified."],
+                        }
+                    }
+                }
+            },
         ),
         InvalidTestCase(
             name="data_spec_with_metadata_invalid_type",
@@ -562,7 +585,7 @@ class TestSpecConstructor:
             error_match="type",
         ),
         InvalidTestCase(
-            name="time_series_start_none",
+            name="time_series_end_none",
             constructor=lambda: TimeSeriesSpec(id=123, start=2, end=None),
             exception=TypeError,
             error_match="type",

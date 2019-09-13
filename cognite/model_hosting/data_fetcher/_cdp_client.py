@@ -76,8 +76,8 @@ class CdpClient:
             id=time_series, granularity=granularity, start=start, end=end, aggregates=[]
         )
 
-    def download_file(self, id: int, target_path: str) -> None:
-        self.cognite_client.files.download_to_path(id=id, path=target_path)
+    def download_file(self, id: int, external_id: str, target_path: str) -> None:
+        self.cognite_client.files.download_to_path(id=id, external_id=external_id, path=target_path)
 
-    def download_file_to_memory(self, id) -> bytes:
-        return self.cognite_client.files.download_bytes(id=id)
+    def download_file_to_memory(self, id: int, external_id: str) -> bytes:
+        return self.cognite_client.files.download_bytes(id=id, external_id=external_id)
