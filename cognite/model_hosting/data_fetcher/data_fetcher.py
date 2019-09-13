@@ -297,16 +297,23 @@ class DataFetcher:
         data_spec (DataSpec): The data spec which describes the desired data.
         api_key (str, optional): API key for authenticating against CDP. Defaults to the value of the environment
                                 variable "COGNITE_API_KEY".
-        project (str, optional): Project. Defaults to project of given API key.
+        project (str, optional): Project. Defaults to the value of the environment variable "COGNITE_PROJECT".
         base_url (str, optional): Base url to send requests to. Defaults to "https://api.cognitedata.com".
+        client_name (str): A user-defined name for the client. Used to identify number of unique applications/scripts
+            running on top of CDF. Defaults to the value of the environment variable "COGNITE_CLIENT_NAME".
     """
 
     def __init__(
-        self, data_spec: Union[DataSpec, Dict, str], api_key: str = None, project: str = None, base_url: str = None
+        self,
+        data_spec: Union[DataSpec, Dict, str],
+        api_key: str = None,
+        project: str = None,
+        base_url: str = None,
+        client_name: str = None,
     ):
         self._data_spec = self._load_data_spec(data_spec)
         self._data_spec.validate()
-        self._cdp_client = CdpClient(api_key=api_key, project=project, base_url=base_url)
+        self._cdp_client = CdpClient(api_key=api_key, project=project, base_url=base_url, client_name=client_name)
 
         self._files_fetcher = FileFetcher(self._data_spec.files, self._cdp_client)
         self._time_series_fetcher = TimeSeriesFetcher(self._data_spec.time_series, self._cdp_client)

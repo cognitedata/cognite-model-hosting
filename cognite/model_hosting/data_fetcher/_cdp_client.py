@@ -20,12 +20,9 @@ class DatapointsFrameQuery:
 
 
 class CdpClient:
-    def __init__(self, api_key: str = None, project: str = None, base_url: str = None):
+    def __init__(self, api_key: str = None, project: str = None, base_url: str = None, client_name: str = None):
         self.cognite_client = CogniteClient(
-            api_key=api_key,
-            project=project,
-            base_url=base_url,
-            client_name="".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)),
+            api_key=api_key, project=project, base_url=base_url, client_name=client_name
         )
         self.max_workers = self.cognite_client.config.max_workers
 
