@@ -3,7 +3,7 @@ import pytest
 
 from cognite.client.data_classes import Datapoints, DatapointsList
 from cognite.client.testing import mock_cognite_client
-from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient, DatapointsFrameQuery
+from cognite.model_hosting.data_fetcher._cdp_client import CdpClient, DatapointsFrameQuery
 
 
 @pytest.fixture
