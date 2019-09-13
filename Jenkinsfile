@@ -32,6 +32,8 @@ podTemplate(
         envVar(key: 'BUILD_NUMBER', value: env.BUILD_NUMBER),
         envVar(key: 'BUILD_URL', value: env.BUILD_URL),
         envVar(key: 'CHANGE_ID', value: env.CHANGE_ID),
+        envVar(key: 'COGNITE_DISABLE_PYPI_VERSION_CHECK', value: '1'),
+        envVar(key: 'COGNITE_CLIENT_NAME', value: 'cognite-model-hosting-integration-tester')
     ]) {
     node(label) {
         def gitCommit
