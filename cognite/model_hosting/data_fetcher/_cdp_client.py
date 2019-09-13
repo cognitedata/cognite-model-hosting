@@ -9,8 +9,9 @@ from cognite.client.data_classes import DatapointsQuery
 
 
 class DatapointsFrameQuery:
-    def __init__(self, id, start, end, aggregate, granularity, include_outside_points):
+    def __init__(self, id, external_id, start, end, aggregate, granularity, include_outside_points):
         self.id = id
+        self.external_id = external_id
         self.start = start
         self.end = end
         self.aggregate = aggregate
@@ -31,6 +32,7 @@ class CdpClient:
     def get_datapoints_frame_single(
         self,
         id: int,
+        external_id: str,
         start: int,
         end: int,
         aggregate: str = None,
@@ -39,6 +41,7 @@ class CdpClient:
     ) -> pd.DataFrame:
         df = self.cognite_client.datapoints.retrieve(
             id=id,
+            external_id=external_id,
             start=start,
             end=end,
             aggregates=[aggregate] if aggregate else None,

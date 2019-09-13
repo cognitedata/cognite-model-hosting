@@ -224,7 +224,10 @@ class TimeSeriesFetcher:
         time_series = []
         for alias in aliases:
             spec = self._specs[alias]
-            time_series.append({"id": spec.id, "aggregates": [spec.aggregate]})
+            if spec.id:
+                time_series.append({"id": spec.id, "aggregates": [spec.aggregate]})
+            elif spec.external_id:
+                time_series.append({"externalId": spec.external_id, "aggregates": [spec.aggregate]})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
         df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         df.columns = aliases
@@ -235,7 +238,13 @@ class TimeSeriesFetcher:
 
         spec = self._specs[alias]
         return self._cdp_client.get_datapoints_frame_single(
-            spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points
+            spec.id,
+            spec.external_id,
+            spec.start,
+            spec.end,
+            spec.aggregate,
+            spec.granularity,
+            spec.include_outside_points,
         )
 
     def _fetch_datapoints_multiple(self, aliases):
@@ -247,6 +256,7 @@ class TimeSeriesFetcher:
             queries.append(
                 DatapointsFrameQuery(
                     id=spec.id,
+                    external_id=spec.external_id,
                     start=spec.start,
                     end=spec.end,
                     aggregate=spec.aggregate,

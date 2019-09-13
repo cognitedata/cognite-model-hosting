@@ -141,7 +141,9 @@ class TestTimeSeries:
                     "ts1": TimeSeriesSpec(id=1234, start=3000, end=5000, aggregate="average", granularity="1s"),
                     "ts2": TimeSeriesSpec(id=2345, start=3000, end=5000, aggregate="max", granularity="1s"),
                     "ts3": TimeSeriesSpec(id=3456, start=4000, end=9000, aggregate="min", granularity="1s"),
-                    "ts4": TimeSeriesSpec(id=4567, start=3000, end=5000, aggregate="average", granularity="1m"),
+                    "ts4": TimeSeriesSpec(
+                        external_id="abc", start=3000, end=5000, aggregate="average", granularity="1m"
+                    ),
                     "ts5": TimeSeriesSpec(id=5678, start=6000, end=8000),
                 }
             )
@@ -182,6 +184,19 @@ class TestTimeSeries:
         df = data_fetcher.time_series.fetch_dataframe(["ts1", "ts2"])
         assert (df.columns == ["ts1", "ts2"]).all()
         assert df.shape == (3, 2)
+
+    def test_fetch_dataframe_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame(time_series, granularity, start, end):
+            assert time_series == [{"externalId": "abc", "aggregates": ["average"]}]
+            assert granularity == "1m"
+            assert start == 3000
+            assert end == 5000
+            return pd.DataFrame([[1], [2], [3]], columns=["ts4"], index=[1000, 2000, 3000])
+
+        cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
+        df = data_fetcher.time_series.fetch_dataframe(["ts4"])
+        assert (df.columns == ["ts4"]).all()
+        assert df.shape == (3, 1)
 
     def test_fetch_dataframe_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):
@@ -228,12 +243,28 @@ class TestTimeSeries:
             assert aggregate == "average"
             assert granularity == "1s"
             assert include_outside_points is None
-            return pd.DataFrame([[3000, 1], [4000, 2], [5000, 3]], columns=["timestamp", "value"])
+            return pd.DataFrame([[1], [2], [3]], columns=["value"], index=[1000, 2000, 3000])
 
         cdp_client_mock.get_datapoints_frame_single.side_effect = get_datapoints_frame_single
         df = data_fetcher.time_series.fetch_datapoints("ts1")
-        assert (df.columns == ["timestamp", "value"]).all()
-        assert df.shape == (3, 2)
+        assert (df.columns == ["value"]).all()
+        assert df.shape == (3, 1)
+
+    def test_fetch_datapoints_single_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame_single(id, external_id, start, end, aggregate, granularity, include_outside_points):
+            assert id is None
+            assert external_id == "abc"
+            assert start == 3000
+            assert end == 5000
+            assert aggregate == "average"
+            assert granularity == "1m"
+            assert include_outside_points is None
+            return pd.DataFrame([[1], [2], [3]], columns=["value"], index=[1000, 2000, 3000])
+
+        cdp_client_mock.get_datapoints_frame_single.side_effect = get_datapoints_frame_single
+        df = data_fetcher.time_series.fetch_datapoints("ts4")
+        assert (df.columns == ["value"]).all()
+        assert df.shape == (3, 1)
 
     def test_fetch_datapoints_single_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):
@@ -244,6 +275,7 @@ class TestTimeSeries:
             results = []
             for q in queries:
                 if q.id == 1234:
+                    assert q.external_id is None
                     assert q.start == 3000
                     assert q.end == 5000
                     assert q.aggregate == "average"
@@ -251,6 +283,7 @@ class TestTimeSeries:
                     assert q.include_outside_points is None
                     results.append(pd.DataFrame([[1], [2], [3]], columns=["value"], index=[3000, 4000, 5000]))
                 elif q.id == 5678:
+                    assert q.external_id is None
                     assert q.start == 6000
                     assert q.end == 8000
                     assert q.aggregate is None
@@ -274,6 +307,33 @@ class TestTimeSeries:
 
         assert (dfs["ts5"].index == [6400, 7300, 7900]).all()
         assert (dfs["ts5"]["value"] == [10, 20, 30]).all()
+
+    def test_fetch_datapoints_multiple_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame_multiple(queries: List[DatapointsFrameQuery]):
+            results = []
+            for q in queries:
+                if q.external_id == "abc":
+                    assert q.id is None
+                    assert q.start == 3000
+                    assert q.end == 5000
+                    assert q.aggregate == "average"
+                    assert q.granularity == "1m"
+                    assert q.include_outside_points is None
+                    results.append(pd.DataFrame([[1], [2], [3]], columns=["value"], index=[3000, 4000, 5000]))
+                else:
+                    raise AssertionError
+            return results
+
+        cdp_client_mock.get_datapoints_frame_multiple.side_effect = get_datapoints_frame_multiple
+
+        dfs = data_fetcher.time_series.fetch_datapoints(["ts4"])
+
+        for df in dfs.values():
+            assert (df.columns == ["value"]).all()
+            assert df.shape == (3, 1)
+
+        assert (dfs["ts4"].index == [3000, 4000, 5000]).all()
+        assert (dfs["ts4"]["value"] == [1, 2, 3]).all()
 
     def test_fetch_datapoints_multiple_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):

@@ -119,10 +119,11 @@ class TimeSeriesSpec(_BaseSpec):
     If the granularity and aggregate parameters are omitted, the TimeSeriesSpec specifies raw data.
 
     Args:
-        id (int): The id of the time series.
         start (Union[str, int, datetime]): The (inclusive) start of the time series. Can be either milliseconds since epoch,
         time-ago format (e.g. "1d-ago"), or a datetime object.
         end (Union[str, int, datetime]): The (exclusive) end of the time series. Same format as start. Can also be set to "now".
+        id (int): The id of the time series.
+        external_id (str): The external id of the time series.
         aggregate (str, optional): The aggregate function to apply to the time series.
         granularity (str, optional): Granularity of the datapoints. e.g. "1m", "2h", or "3d".
         include_outside_points (bool): Whether or not to include the first point before and after start and end. Can
@@ -131,16 +132,18 @@ class TimeSeriesSpec(_BaseSpec):
 
     def __init__(
         self,
-        id: int,
         start: Union[int, str, datetime],
         end: Union[int, str, datetime],
+        id: int = None,
+        external_id: str = None,
         aggregate: str = None,
         granularity: str = None,
         include_outside_points: bool = None,
     ):
-        self.id = id
         self.start = timestamp_to_ms(start)
         self.end = timestamp_to_ms(end)
+        self.id = id
+        self.external_id = external_id
         self.aggregate = aggregate
         self.granularity = granularity
         self.include_outside_points = include_outside_points
@@ -455,7 +458,8 @@ class AliasField(fields.String):
 class _TimeSeriesSpecSchema(_BaseSchema):
     _default_spec = TimeSeriesSpec
 
-    id = fields.Int(required=True)
+    id = fields.Int()
+    externalId = fields.Str(attribute="external_id")
     start = fields.Int(required=True)
     end = fields.Int(required=True)
     aggregate = fields.Str(
@@ -467,9 +471,17 @@ class _TimeSeriesSpecSchema(_BaseSchema):
     includeOutsidePoints = fields.Bool(attribute="include_outside_points")
 
     @validates_schema(skip_on_field_errors=False)
+    def validate_identifiers(self, data):
+        errors = {}
+        if ("id" in data and "external_id" in data) or ("id" not in data and "external_id" not in data):
+            errors["external_id"] = ["Exactly one of id and external_id must be specified."]
+            errors["id"] = ["Exactly one of id and external_id must be specified."]
+        if errors:
+            raise ValidationError(errors)
+
+    @validates_schema(skip_on_field_errors=False)
     def validate_aggregate(self, data):
         errors = {}
-
         if "aggregate" in data:
             if "granularity" not in data:
                 errors["granularity"] = ["granularity must be specified for aggregates."]

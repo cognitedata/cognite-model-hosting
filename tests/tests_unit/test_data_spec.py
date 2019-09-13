@@ -40,6 +40,11 @@ class TestSpecValidation:
             {"id": 6, "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase(
+            "time_series_external_id",
+            TimeSeriesSpec(external_id="abc", start=123, end=234, aggregate="average", granularity="1m"),
+            {"externalId": "abc", "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
+        ),
+        TestCase(
             "schedule_input_time_series",
             ScheduleInputTimeSeriesSpec(id=6, aggregate="average", granularity="1m"),
             {"id": 6, "aggregate": "average", "granularity": "1m"},
@@ -173,11 +178,24 @@ class TestSpecValidation:
             errors={"id": ["Missing data for required field."]},
         ),
         InvalidTestCase(
-            name="time_series_missing_id",
+            name="time_series_missing_id_and_external_id",
             type=TimeSeriesSpec,
             constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
             primitive={"start": 1, "end": 2},
-            errors={"id": ["Missing data for required field."]},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="time_series_id_and_external_id_specified",
+            type=TimeSeriesSpec,
+            constructor=lambda: TimeSeriesSpec(id=1, external_id="abc", start=1, end=2),
+            primitive={"start": 1, "end": 2},
+            errors={
+                "external_id": ["Exactly one of id and external_id must be specified."],
+                "id": ["Exactly one of id and external_id must be specified."],
+            },
         ),
         InvalidTestCase(
             name="time_series_missing_fields",
@@ -185,7 +203,8 @@ class TestSpecValidation:
             constructor=None,
             primitive={},
             errors={
-                "id": ["Missing data for required field."],
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
                 "start": ["Missing data for required field."],
                 "end": ["Missing data for required field."],
             },
