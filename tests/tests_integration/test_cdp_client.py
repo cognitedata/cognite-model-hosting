@@ -10,7 +10,7 @@ CLIENT = CdpClient()
 
 
 def test_get_datapoints_frame_single(ts_ids, now):
-    df = CLIENT.get_datapoints_frame_single(ts_ids["constant_3"], start=now - 3600 * 1000, end=now)
+    df = CLIENT.get_datapoints_frame_single(ts_ids["constant_3"], None, start=now - 3600 * 1000, end=now)
     assert all(["value"] == df.columns)
     assert 3 == round(df["value"].mean())
 
@@ -32,7 +32,7 @@ def test_download_file(file_ids):
     target_path = os.path.dirname(os.path.abspath(__file__)) + "/{}".format(random_string())
 
     print(file_ids["a.txt"])
-    CLIENT.download_file(file_ids["a.txt"], target_path)
+    CLIENT.download_file(file_ids["a.txt"], None, target_path)
     assert Path(target_path).is_file()
     with open(target_path, "r") as f:
         assert "a" == f.read()
@@ -40,6 +40,6 @@ def test_download_file(file_ids):
 
 
 def test_download_file_to_memory(file_ids):
-    file_bytes = CLIENT.download_file_to_memory(file_ids["a.txt"])
+    file_bytes = CLIENT.download_file_to_memory(file_ids["a.txt"], None)
     assert isinstance(file_bytes, bytes)
     assert "a" == file_bytes.decode()

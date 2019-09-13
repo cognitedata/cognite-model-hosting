@@ -17,7 +17,7 @@ def mock_cogcli_datapoints_retrieve_single():
 
 def test_get_datapoints_frame_single(mock_cogcli_datapoints_retrieve_single):
     client = CdpClient()
-    res = client.get_datapoints_frame_single(id=1, start=0, end=4000)
+    res = client.get_datapoints_frame_single(id=1, external_id=None, start=0, end=4000)
     assert (3, 1) == res.shape
     assert res.columns == ["value"]
 
@@ -34,7 +34,17 @@ def mock_cogcli_datapoints_query():
 def test_get_datapoints_frame_multiple(mock_cogcli_datapoints_query):
     client = CdpClient()
     res = client.get_datapoints_frame_multiple(
-        [DatapointsFrameQuery(id=1, start=0, end=4000, aggregate=None, granularity=None, include_outside_points=False)]
+        [
+            DatapointsFrameQuery(
+                id=1,
+                external_id=None,
+                start=0,
+                end=4000,
+                aggregate=None,
+                granularity=None,
+                include_outside_points=False,
+            )
+        ]
     )
     assert (3, 1) == res[0].shape
     assert res[0].columns == ["value"]

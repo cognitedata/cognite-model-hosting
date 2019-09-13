@@ -1,15 +1,12 @@
 import json
 from collections import namedtuple
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from cognite.model_hosting.schedules import ScheduleOutput, to_output
-from cognite.model_hosting.schedules.exceptions import (
-    DataframeMissingTimestampColumn,
-    DuplicateAliasInScheduledOutput,
-    InvalidScheduleOutputFormat,
-)
+from cognite.model_hosting.schedules.exceptions import DuplicateAliasInScheduledOutput, InvalidScheduleOutputFormat
 
 
 class TestConvertToOutput:
@@ -17,25 +14,29 @@ class TestConvertToOutput:
 
     valid_test_cases = [
         ValidTestCase(
-            input=pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3]}),
-            expected_output={"timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]]}},
+            input=pd.DataFrame({"x": [1, 2, 3]}, index=[1000, 2000, 3000]),
+            expected_output={"timeSeries": {"x": [(1000, 1), (2000, 2), (3000, 3)]}},
         ),
         ValidTestCase(
-            input=pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3], "y": [4, 5, 6]}),
+            input=pd.DataFrame({"x": [1, 2, 3]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")),
+            expected_output={"timeSeries": {"x": [(1000, 1), (2000, 2), (3000, 3)]}},
+        ),
+        ValidTestCase(
+            input=pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}, index=[1000, 2000, 3000]),
             expected_output={
-                "timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]], "y": [[1000, 4], [2000, 5], [3000, 6]]}
+                "timeSeries": {"x": [(1000, 1), (2000, 2), (3000, 3)], "y": [(1000, 4), (2000, 5), (3000, 6)]}
             },
         ),
         ValidTestCase(
             input=[
-                pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3], "y": [4, 5, 6]}),
-                pd.DataFrame({"timestamp": [4000, 5000, 6000], "z": [7, 8, 9]}),
+                pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}, index=[1000, 2000, 3000]),
+                pd.DataFrame({"z": [7, 8, 9]}, index=[4000, 5000, 6000]),
             ],
             expected_output={
                 "timeSeries": {
-                    "x": [[1000, 1], [2000, 2], [3000, 3]],
-                    "y": [[1000, 4], [2000, 5], [3000, 6]],
-                    "z": [[4000, 7], [5000, 8], [6000, 9]],
+                    "x": [(1000, 1), (2000, 2), (3000, 3)],
+                    "y": [(1000, 4), (2000, 5), (3000, 6)],
+                    "z": [(4000, 7), (5000, 8), (6000, 9)],
                 }
             },
         ),
@@ -43,21 +44,21 @@ class TestConvertToOutput:
 
     @pytest.mark.parametrize("input, expected_output", valid_test_cases)
     def test_convert_to_output_format_ok(self, input, expected_output):
-        assert expected_output == to_output(input)
-
-    def test_convert_to_output_no_timestamp(self):
-        with pytest.raises(DataframeMissingTimestampColumn, match="missing"):
-            to_output(pd.DataFrame({"x": [1, 2, 3], "y": [2, 3, 4]}))
+        actual_output = to_output(input)
+        assert expected_output == actual_output
+        try:
+            json.dumps(actual_output)
+        except Exception:
+            raise AssertionError("Could not dump result into json")
 
     def test_convert_to_output_duplicate_alias(self):
         with pytest.raises(DuplicateAliasInScheduledOutput, match="multiple"):
-            to_output([pd.DataFrame({"x": [1], "timestamp": [1]}), pd.DataFrame({"x": [1], "timestamp": [1]})])
+            to_output([pd.DataFrame({"x": [1]}, index=[1]), pd.DataFrame({"x": [1]}, index=[1])])
 
 
 class TestValidateOutputFormat:
     InvalidTestCase = namedtuple("InvalidTestCase", ["input", "error_msg"])
     invalid_test_cases = [
-        InvalidTestCase(input={"time_series": {}}, error_msg={"time_series": ["Unknown field."]}),
         InvalidTestCase(
             input={"timeSeries": {"x": [1]}}, error_msg={"timeSeries": {"x": {"value": {"0": ["Not a valid list."]}}}}
         ),
@@ -84,14 +85,14 @@ class TestConvertToDatapoints:
         ValidTestCase(
             input={"timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]]}},
             alias="x",
-            expected_output=pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3]}),
+            expected_output=pd.DataFrame({"x": [1, 2, 3]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")),
         ),
         ValidTestCase(
             input={"timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]], "y": [[1000, 4], [2000, 5], [3000, 6]]}},
             alias=["x", "y"],
             expected_output={
-                "x": pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3]}),
-                "y": pd.DataFrame({"timestamp": [1000, 2000, 3000], "y": [4, 5, 6]}),
+                "x": pd.DataFrame({"x": [1, 2, 3]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")),
+                "y": pd.DataFrame({"y": [4, 5, 6]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")),
             },
         ),
     ]
@@ -129,12 +130,14 @@ class TestConvertToDataFrame:
         ValidTestCase(
             input={"timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]]}},
             alias="x",
-            expected_output=pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3]}),
+            expected_output=pd.DataFrame({"x": [1, 2, 3]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")),
         ),
         ValidTestCase(
             input={"timeSeries": {"x": [[1000, 1], [2000, 2], [3000, 3]], "y": [[1000, 4], [2000, 5], [3000, 6]]}},
             alias=["x", "y"],
-            expected_output=pd.DataFrame({"timestamp": [1000, 2000, 3000], "x": [1, 2, 3], "y": [4, 5, 6]}),
+            expected_output=pd.DataFrame(
+                {"x": [1, 2, 3], "y": [4, 5, 6]}, index=np.array([1000, 2000, 3000], dtype="datetime64[ms]")
+            ),
         ),
     ]
 
