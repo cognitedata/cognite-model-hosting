@@ -2,8 +2,7 @@ import random
 import string
 
 BASE_URL = "https://api.cognitedata.com"
-BASE_URL_V0_5 = BASE_URL + "/api/0.5/projects/test"
-BASE_URL_V0_6 = BASE_URL + "/api/0.6/projects/test"
+BASE_URL_V1 = BASE_URL + "/api/v1/projects/test"
 
 
 def random_string(length: int = 5):

@@ -4,17 +4,14 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from cognite.model_hosting.data_fetcher._client.api_client import MAX_CONNECTION_POOL_SIZE
-from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
+from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient, DatapointsFrameQuery
 from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
 
-_NUMBER_OF_THREADS = MAX_CONNECTION_POOL_SIZE
 
-
-def _execute_tasks_concurrently(func, tasks):
-    with ThreadPoolExecutor(_NUMBER_OF_THREADS) as p:
+def _execute_tasks_concurrently(func, tasks, max_workers: int):
+    with ThreadPoolExecutor(max_workers) as p:
         futures = [p.submit(func, *task) for task in tasks]
         return [future.result() for future in futures]
 
@@ -86,7 +83,7 @@ class FileFetcher:
         else:
             raise TypeError("alias must be of type str or list, was {}".format(type(alias)))
 
-        _execute_tasks_concurrently(self._download_single_file, tasks)
+        _execute_tasks_concurrently(self._download_single_file, tasks, self._cdp_client.max_workers)
 
     def fetch_to_memory(self, alias: Union[str, List[str]]) -> Union[bytes, Dict[str, bytes]]:
         """Fetches the file(s) given by the provided alias(es) to memory.
@@ -105,7 +102,7 @@ class FileFetcher:
         elif isinstance(alias, list):
             files = {}
             tasks = [(a,) for a in alias]
-            res = _execute_tasks_concurrently(self._download_single_file_to_memory, tasks)
+            res = _execute_tasks_concurrently(self._download_single_file_to_memory, tasks, self._cdp_client.max_workers)
             for file in res:
                 files.update(file)
             return files
@@ -176,6 +173,16 @@ class TimeSeriesFetcher:
             if self._specs[alias].aggregate is None:
                 raise InvalidFetchRequest("All time series of a data frame needs to be aggregates")
 
+    def _check_no_duplicates(self, aliases: List[str]):
+        seen = {}
+        for alias in aliases:
+            ts_id = self._specs[alias].id
+            if ts_id in seen:
+                raise InvalidFetchRequest(
+                    "Aliases {} and {} reference the same time series: {}".format(alias, seen[ts_id], ts_id)
+                )
+            seen[ts_id] = alias
+
     def _get_common_start_end_granularity(self, aliases):
         starts = set()
         ends = set()
@@ -213,13 +220,14 @@ class TimeSeriesFetcher:
             raise TypeError("Invalid argument type. Aliases should be a list of string")
         self._check_valid_aliases(aliases)
         self._check_only_aggregates(aliases)
+        self._check_no_duplicates(aliases)
         time_series = []
         for alias in aliases:
             spec = self._specs[alias]
-            time_series.append({"id": spec.id, "aggregate": spec.aggregate})
+            time_series.append({"id": spec.id, "aggregates": [spec.aggregate]})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
         df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
-        df.columns = ["timestamp"] + aliases
+        df.columns = aliases
         return df
 
     def _fetch_datapoints_single(self, alias):
@@ -233,12 +241,21 @@ class TimeSeriesFetcher:
     def _fetch_datapoints_multiple(self, aliases):
         self._check_valid_aliases(aliases)
 
-        tasks = []
+        queries = []
         for alias in aliases:
             spec = self._specs[alias]
-            tasks.append((spec.id, spec.start, spec.end, spec.aggregate, spec.granularity, spec.include_outside_points))
-        res = _execute_tasks_concurrently(self._cdp_client.get_datapoints_frame_single, tasks)
-        data_frames = {alias: df for alias, df in zip(aliases, res)}
+            queries.append(
+                DatapointsFrameQuery(
+                    id=spec.id,
+                    start=spec.start,
+                    end=spec.end,
+                    aggregate=spec.aggregate,
+                    granularity=spec.granularity,
+                    include_outside_points=spec.include_outside_points,
+                )
+            )
+        dfs = self._cdp_client.get_datapoints_frame_multiple(queries)
+        data_frames = {alias: df for alias, df in zip(aliases, dfs)}
         return data_frames
 
     def fetch_datapoints(self, alias: Union[str, List[str]]) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:

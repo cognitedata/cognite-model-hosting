@@ -12,32 +12,21 @@ CLIENT = CdpClient()
 
 def test_get_datapoints_frame_single(ts_ids, now):
     df = CLIENT.get_datapoints_frame_single(ts_ids["constant_3"], start=now - 3600 * 1000, end=now)
-    assert all(["timestamp", "value"] == df.columns)
+    assert all(["value"] == df.columns)
     assert 3 == round(df["value"].mean())
 
 
 def test_get_datapoints_frame(ts_ids, now):
-    time_series = [{"id": ts_ids["constant_3"], "aggregate": "min"}, {"id": ts_ids["constant_4"], "aggregate": "max"}]
+    time_series = [
+        {"id": ts_ids["constant_3"], "aggregates": ["min"]},
+        {"id": ts_ids["constant_4"], "aggregates": ["max"]},
+    ]
     df = CLIENT.get_datapoints_frame(time_series, granularity="1h", start=now - 6 * 3600 * 1000, end=now)
     assert isinstance(df, pd.DataFrame)
-    assert all(["timestamp", "test__constant_3_with_noise|min", "test__constant_4_with_noise|max"] == df.columns)
-    assert 3 == round(df["test__constant_3_with_noise|min"].mean())
-    assert 4 == round(df["test__constant_4_with_noise|max"].mean())
-
-
-def test_get_time_series_by_id(ts_ids):
-    ids_to_fetch = [ts_ids["constant_3"], ts_ids["constant_4"]]
-    res = CLIENT.get_time_series_by_id(ids_to_fetch)
-
-    fetched_ids = [ts["id"] for ts in res]
-
-    assert set(ids_to_fetch) == set(fetched_ids)
-
-
-@pytest.fixture()
-def file_in_tenant():
-    file_list = CLIENT.get("/files".format(CLIENT._project), params={"limit": 1})
-    return file_list.json()["data"]["items"][0]
+    print(df.columns)
+    assert all(["{}|min".format(ts_ids["constant_3"]), "{}|max".format(ts_ids["constant_4"])] == df.columns)
+    assert 3 == round(df["{}|min".format(ts_ids["constant_3"])].mean())
+    assert 4 == round(df["{}|max".format(ts_ids["constant_4"])].mean())
 
 
 def test_download_file(file_ids):

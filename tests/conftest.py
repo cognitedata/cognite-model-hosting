@@ -8,7 +8,10 @@ from tests.utils import BASE_URL
 def rsps():
     with responses.RequestsMock() as rsps:
         rsps.add(
-            responses.GET, BASE_URL + "/login/status", status=200, json={"data": {"project": "test", "loggedIn": True}}
+            responses.GET,
+            BASE_URL + "/login/status",
+            status=200,
+            json={"data": {"user": "test", "project": "test", "loggedIn": True, "projectId": 123}},
         )
         yield rsps
 

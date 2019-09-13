@@ -32,11 +32,11 @@
         },
         "cognite-sdk": {
             "hashes": [
-                "sha256:a60f50a4716e763ad9327ec3b48320b26b280b9902da306f5b154a09e6d437de",
-                "sha256:cf0c324fd271741052695534c4ca999e0adf4e700ce0970d11e646eed82e1974"
+                "sha256:6af7bb72fe4ef42ed7b58d37dcb4483ef7777c9f1b1b4941628f90309a9c3165",
+                "sha256:a1804289c2cc882fe89374de913981cf0b271a7b7e3e41d67aa8abb799d4b57d"
             ],
             "index": "pypi",
-            "version": "==1.1.4"
+            "version": "==1.1.7"
         },
         "idna": {
             "hashes": [
