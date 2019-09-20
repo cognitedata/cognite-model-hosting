@@ -26,6 +26,7 @@ class TestSpecValidation:
 
     valid_test_cases = [
         TestCase("minimal_file_spec", FileSpec(id=6), {"id": 6}),
+        TestCase("minimal_file_spec_external_id", FileSpec(external_id="abc"), {"externalId": "abc"}),
         TestCase(
             "minimal_time_series_spec", TimeSeriesSpec(id=6, start=123, end=234), {"id": 6, "start": 123, "end": 234}
         ),
@@ -40,9 +41,19 @@ class TestSpecValidation:
             {"id": 6, "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
         ),
         TestCase(
+            "time_series_external_id",
+            TimeSeriesSpec(external_id="abc", start=123, end=234, aggregate="average", granularity="1m"),
+            {"externalId": "abc", "start": 123, "end": 234, "aggregate": "average", "granularity": "1m"},
+        ),
+        TestCase(
             "schedule_input_time_series",
             ScheduleInputTimeSeriesSpec(id=6, aggregate="average", granularity="1m"),
             {"id": 6, "aggregate": "average", "granularity": "1m"},
+        ),
+        TestCase(
+            "schedule_input_time_series_external_id",
+            ScheduleInputTimeSeriesSpec(external_id="abc", aggregate="average", granularity="1m"),
+            {"externalId": "abc", "aggregate": "average", "granularity": "1m"},
         ),
         TestCase("empty_data_spec", DataSpec(), {}),
         TestCase(
@@ -98,6 +109,11 @@ class TestSpecValidation:
             "schedule_output_time_series_spec",
             ScheduleOutputTimeSeriesSpec(id=123, offset=-5),
             {"id": 123, "offset": -5},
+        ),
+        TestCase(
+            "schedule_output_time_series_spec_external_id",
+            ScheduleOutputTimeSeriesSpec(external_id="abc", offset=-5),
+            {"externalId": "abc", "offset": -5},
         ),
         TestCase("minimal_schedule_output_spec", ScheduleOutputSpec(), {}),
         TestCase(
@@ -166,18 +182,44 @@ class TestSpecValidation:
 
     invalid_test_cases = [
         InvalidTestCase(
-            name="file_missing_id",
+            name="file_missing_identifier",
             type=FileSpec,
-            constructor=lambda: FileSpec(id=None),
+            constructor=lambda: FileSpec(),
             primitive={},
-            errors={"id": ["Missing data for required field."]},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
         ),
         InvalidTestCase(
-            name="time_series_missing_id",
+            name="file_spec_id_and_external_id_specified",
+            type=FileSpec,
+            constructor=lambda: FileSpec(id=1, external_id="abc"),
+            primitive={"id": 1, "externalId": "abc"},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="time_series_missing_id_and_external_id",
             type=TimeSeriesSpec,
             constructor=lambda: TimeSeriesSpec(id=None, start=1, end=2),
             primitive={"start": 1, "end": 2},
-            errors={"id": ["Missing data for required field."]},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="time_series_id_and_external_id_specified",
+            type=TimeSeriesSpec,
+            constructor=lambda: TimeSeriesSpec(id=1, external_id="abc", start=1, end=2),
+            primitive={"start": 1, "end": 2},
+            errors={
+                "external_id": ["Exactly one of id and external_id must be specified."],
+                "id": ["Exactly one of id and external_id must be specified."],
+            },
         ),
         InvalidTestCase(
             name="time_series_missing_fields",
@@ -185,7 +227,8 @@ class TestSpecValidation:
             constructor=None,
             primitive={},
             errors={
-                "id": ["Missing data for required field."],
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
                 "start": ["Missing data for required field."],
                 "end": ["Missing data for required field."],
             },
@@ -246,7 +289,16 @@ class TestSpecValidation:
             type=DataSpec,
             constructor=lambda: DataSpec(files={"f1": FileSpec(id=None)}),
             primitive={"files": {"f1": {}}},
-            errors={"files": {"f1": {"value": {"id": ["Missing data for required field."]}}}},
+            errors={
+                "files": {
+                    "f1": {
+                        "value": {
+                            "external_id": ["Exactly one of id and external_id must be specified."],
+                            "id": ["Exactly one of id and external_id must be specified."],
+                        }
+                    }
+                }
+            },
         ),
         InvalidTestCase(
             name="data_spec_with_metadata_invalid_type",
@@ -294,9 +346,43 @@ class TestSpecValidation:
         InvalidTestCase(
             name="schedule_output_time_series_spec_missing_fields",
             type=ScheduleOutputTimeSeriesSpec,
-            constructor=lambda: ScheduleOutputTimeSeriesSpec(id=None, offset=None),
+            constructor=lambda: ScheduleOutputTimeSeriesSpec(offset=None),
             primitive={},
-            errors={"id": ["Missing data for required field."], "offset": ["Missing data for required field."]},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+                "offset": ["Missing data for required field."],
+            },
+        ),
+        InvalidTestCase(
+            name="schedule_output_time_series_spec_id_and_external_id_specified",
+            type=ScheduleOutputTimeSeriesSpec,
+            constructor=lambda: ScheduleOutputTimeSeriesSpec(id=1, external_id="abc", offset=0),
+            primitive={"id": 1, "externalId": "abc", "offset": 0},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="schedule_input_time_series_spec_missing_fields",
+            type=ScheduleInputTimeSeriesSpec,
+            constructor=lambda: ScheduleInputTimeSeriesSpec(),
+            primitive={},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
+        ),
+        InvalidTestCase(
+            name="schedule_input_time_series_spec_id_and_external_id_specified",
+            type=ScheduleInputTimeSeriesSpec,
+            constructor=lambda: ScheduleInputTimeSeriesSpec(id=1, external_id="abc"),
+            primitive={"id": 1, "externalId": "abc"},
+            errors={
+                "id": ["Exactly one of id and external_id must be specified."],
+                "external_id": ["Exactly one of id and external_id must be specified."],
+            },
         ),
         InvalidTestCase(
             name="schedule_data_spec_missing_fields",
@@ -499,7 +585,7 @@ class TestSpecConstructor:
             error_match="type",
         ),
         InvalidTestCase(
-            name="time_series_start_none",
+            name="time_series_end_none",
             constructor=lambda: TimeSeriesSpec(id=123, start=2, end=None),
             exception=TypeError,
             error_match="type",

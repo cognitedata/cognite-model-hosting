@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from cognite.model_hosting.data_fetcher import DataFetcher
+from cognite.model_hosting.data_fetcher.exceptions import InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 
 
@@ -50,7 +51,7 @@ class TestTimeSeries:
 
     def test_fetch_datapoints_single(self, data_fetcher):
         df = data_fetcher.time_series.fetch_datapoints("constant3")
-        self.assert_data_frame(df, ["timestamp", "value"], {"value": 3})
+        self.assert_data_frame(df, ["value"], {"value": 3})
 
     def test_fetch_datapoints_single_many_datapoints(self, ts_ids, now):
         data_fetcher = DataFetcher(
@@ -61,14 +62,14 @@ class TestTimeSeries:
             )
         )
         df = data_fetcher.time_series.fetch_datapoints("constant3")
-        self.assert_data_frame(df, ["timestamp", "value"], {"value": 3})
+        self.assert_data_frame(df, ["value"], {"value": 3})
 
     def test_fetch_datapoints_multiple(self, data_fetcher):
         dfs = data_fetcher.time_series.fetch_datapoints(["constant3", "constant4"])
         assert 2 == len(dfs)
 
-        self.assert_data_frame(dfs["constant3"], ["timestamp", "value"], {"value": 3})
-        self.assert_data_frame(dfs["constant4"], ["timestamp", "value"], {"value": 4})
+        self.assert_data_frame(dfs["constant3"], ["value"], {"value": 3})
+        self.assert_data_frame(dfs["constant4"], ["value"], {"value": 4})
 
     def test_fetch_datapoints_multiple_many_datapoints(self, ts_ids, now):
         data_fetcher = DataFetcher(
@@ -80,8 +81,8 @@ class TestTimeSeries:
             )
         )
         dfs = data_fetcher.time_series.fetch_datapoints(["constant3", "constant4"])
-        self.assert_data_frame(dfs["constant3"], ["timestamp", "value"], {"value": 3})
-        self.assert_data_frame(dfs["constant4"], ["timestamp", "value"], {"value": 4})
+        self.assert_data_frame(dfs["constant3"], ["value"], {"value": 3})
+        self.assert_data_frame(dfs["constant4"], ["value"], {"value": 4})
 
     def test_fetch_datapoints_many_time_series(self, ts_ids, now):
         data_fetcher = DataFetcher(
@@ -96,30 +97,30 @@ class TestTimeSeries:
         )
         dfs = data_fetcher.time_series.fetch_datapoints(["constant{}".format(i) for i in range(100)])
         for i in range(100):
-            self.assert_data_frame(dfs["constant{}".format(i)], ["timestamp", "value"], {"value": i})
+            self.assert_data_frame(dfs["constant{}".format(i)], ["value"], {"value": i})
 
     def test_fetch_datapoints_raw_and_aggregate_of_same_time_series(self, data_fetcher):
         dfs = data_fetcher.time_series.fetch_datapoints(["constant3", "constant3_avg_1m"])
         assert 2 == len(dfs)
 
-        self.assert_data_frame(dfs["constant3"], ["timestamp", "value"], {"value": 3})
-        self.assert_data_frame(dfs["constant3_avg_1m"], ["timestamp", "average"], {"average": 3})
+        self.assert_data_frame(dfs["constant3"], ["value"], {"value": 3})
+        self.assert_data_frame(dfs["constant3_avg_1m"], ["average"], {"average": 3})
         assert len(dfs["constant3"]) > len(dfs["constant3_avg_1m"])
 
     def test_fetch_datapoints_duplicate_raw(self, data_fetcher):
         dfs = data_fetcher.time_series.fetch_datapoints(["constant3", "constant3_duplicate"])
         assert 2 == len(dfs)
 
-        self.assert_data_frame(dfs["constant3"], ["timestamp", "value"], {"value": 3})
-        self.assert_data_frame(dfs["constant3_duplicate"], ["timestamp", "value"], {"value": 3})
+        self.assert_data_frame(dfs["constant3"], ["value"], {"value": 3})
+        self.assert_data_frame(dfs["constant3_duplicate"], ["value"], {"value": 3})
         assert (dfs["constant3"] == dfs["constant3_duplicate"]).all().all()
 
     def test_fetch_datapoints_duplicate_aggregates(self, data_fetcher):
         dfs = data_fetcher.time_series.fetch_datapoints(["constant3_avg_1s", "constant3_avg_1s_duplicate"])
         assert 2 == len(dfs)
 
-        self.assert_data_frame(dfs["constant3_avg_1s"], ["timestamp", "average"], {"average": 3})
-        self.assert_data_frame(dfs["constant3_avg_1s_duplicate"], ["timestamp", "average"], {"average": 3})
+        self.assert_data_frame(dfs["constant3_avg_1s"], ["average"], {"average": 3})
+        self.assert_data_frame(dfs["constant3_avg_1s_duplicate"], ["average"], {"average": 3})
         assert (dfs["constant3_avg_1s"][:100] == dfs["constant3_avg_1s_duplicate"][:100]).all().all()
 
     def test_fetch_dataframe(self, data_fetcher):
@@ -128,17 +129,13 @@ class TestTimeSeries:
         )
         self.assert_data_frame(
             df,
-            ["timestamp", "constant5_min_1s", "constant4_avg_1s", "constant3_avg_1s", "constant6_max_1s"],
+            ["constant5_min_1s", "constant4_avg_1s", "constant3_avg_1s", "constant6_max_1s"],
             {"constant3_avg_1s": 3, "constant4_avg_1s": 4, "constant5_min_1s": 5, "constant6_max_1s": 6},
         )
 
     def test_fetch_dataframe_duplicate(self, data_fetcher):
-        df = data_fetcher.time_series.fetch_dataframe(["constant3_avg_1s", "constant3_avg_1s_duplicate"])
-        self.assert_data_frame(
-            df,
-            ["timestamp", "constant3_avg_1s", "constant3_avg_1s_duplicate"],
-            {"constant3_avg_1s": 3, "constant3_avg_1s_duplicate": 3},
-        )
+        with pytest.raises(InvalidFetchRequest, match="reference the same time series"):
+            data_fetcher.time_series.fetch_dataframe(["constant3_avg_1s", "constant3_avg_1s_duplicate"])
 
 
 class TestFiles:

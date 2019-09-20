@@ -1,14 +1,16 @@
 import os
+from typing import List
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
 from cognite.model_hosting.data_fetcher import DataFetcher
+from cognite.model_hosting.data_fetcher._cdp_client import DatapointsFrameQuery
 from cognite.model_hosting.data_fetcher.exceptions import DirectoryDoesNotExist, InvalidAlias, InvalidFetchRequest
 from cognite.model_hosting.data_spec import DataSpec, FileSpec, TimeSeriesSpec
 from cognite.model_hosting.data_spec.exceptions import SpecValidationError
-from tests.utils import BASE_URL_V0_5
+from tests.utils import BASE_URL_V1
 
 
 @pytest.mark.parametrize("data_spec", [DataSpec(), {}, "{}"])
@@ -32,7 +34,7 @@ def test_get_data_spec():
 class TestFileFetcher:
     @pytest.fixture(scope="class")
     def file_specs(self):
-        return {"f1": FileSpec(id=123), "f2": FileSpec(id=234)}
+        return {"f1": FileSpec(id=123), "f2": FileSpec(external_id="abc")}
 
     @pytest.fixture
     def data_fetcher(self, file_specs, rsps):
@@ -64,9 +66,19 @@ class TestFileFetcher:
     def mock_file_download(self, rsps):
         mock_download_url = "http://download.url"
         rsps.assert_all_requests_are_fired = False
-        rsps.add(rsps.GET, BASE_URL_V0_5 + "/files/123/downloadlink", status=200, json={"data": mock_download_url})
+        rsps.add(
+            rsps.POST,
+            BASE_URL_V1 + "/files/downloadlink",
+            status=200,
+            json={"items": [{"id": 123, "downloadUrl": mock_download_url}]},
+        )
         rsps.add(rsps.GET, mock_download_url, status=200, body=b"blablabla")
-        rsps.add(rsps.GET, BASE_URL_V0_5 + "/files/234/downloadlink", status=200, json={"data": mock_download_url})
+        rsps.add(
+            rsps.POST,
+            BASE_URL_V1 + "/files/downloadlink",
+            status=200,
+            json={"items": [{"id": 123, "downloadUrl": mock_download_url}]},
+        )
         rsps.add(rsps.GET, mock_download_url, status=200, body=b"blablabla")
 
     @staticmethod
@@ -80,6 +92,13 @@ class TestFileFetcher:
     def test_fetch_single_file(self, mock_file_download, data_fetcher, directory):
         data_fetcher.files.fetch(alias="f1", directory=directory)
         file_path = os.path.join(directory or os.getcwd(), "f1")
+
+        self.assert_file_exists_and_has_content(file_path, b"blablabla")
+
+    @pytest.mark.parametrize("directory", [None, "/tmp"])
+    def test_fetch_single_file_external_id(self, mock_file_download, data_fetcher, directory):
+        data_fetcher.files.fetch(alias="f2", directory=directory)
+        file_path = os.path.join(directory or os.getcwd(), "f2")
 
         self.assert_file_exists_and_has_content(file_path, b"blablabla")
 
@@ -129,7 +148,9 @@ class TestTimeSeries:
                     "ts1": TimeSeriesSpec(id=1234, start=3000, end=5000, aggregate="average", granularity="1s"),
                     "ts2": TimeSeriesSpec(id=2345, start=3000, end=5000, aggregate="max", granularity="1s"),
                     "ts3": TimeSeriesSpec(id=3456, start=4000, end=9000, aggregate="min", granularity="1s"),
-                    "ts4": TimeSeriesSpec(id=4567, start=3000, end=5000, aggregate="average", granularity="1m"),
+                    "ts4": TimeSeriesSpec(
+                        external_id="abc", start=3000, end=5000, aggregate="average", granularity="1m"
+                    ),
                     "ts5": TimeSeriesSpec(id=5678, start=6000, end=8000),
                 }
             )
@@ -160,26 +181,29 @@ class TestTimeSeries:
 
     def test_fetch_dataframe(self, data_fetcher, cdp_client_mock):
         def get_datapoints_frame(time_series, granularity, start, end):
-            assert time_series == [{"id": 1234, "aggregate": "average"}, {"id": 2345, "aggregate": "max"}]
+            assert time_series == [{"id": 1234, "aggregates": ["average"]}, {"id": 2345, "aggregates": ["max"]}]
             assert granularity == "1s"
             assert start == 3000
             assert end == 5000
-            return pd.DataFrame([[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "ts1", "ts2"])
-
-        def get_time_series_by_id(*args, **kwargs):
-            return [
-                {"name": "myts1", "id": 1234},
-                {"name": "myts2", "id": 2345},
-                {"name": "myts3", "id": 3456},
-                {"name": "myts4", "id": 4567},
-                {"name": "myts5", "id": 5678},
-            ]
+            return pd.DataFrame([[1, 10], [2, 20], [3, 30]], columns=["ts1", "ts2"], index=[1000, 2000, 3000])
 
         cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
-        cdp_client_mock.get_time_series_by_id.side_effect = get_time_series_by_id
         df = data_fetcher.time_series.fetch_dataframe(["ts1", "ts2"])
-        assert (df.columns == ["timestamp", "ts1", "ts2"]).all()
-        assert df.shape == (3, 3)
+        assert (df.columns == ["ts1", "ts2"]).all()
+        assert df.shape == (3, 2)
+
+    def test_fetch_dataframe_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame(time_series, granularity, start, end):
+            assert time_series == [{"externalId": "abc", "aggregates": ["average"]}]
+            assert granularity == "1m"
+            assert start == 3000
+            assert end == 5000
+            return pd.DataFrame([[1], [2], [3]], columns=["ts4"], index=[1000, 2000, 3000])
+
+        cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
+        df = data_fetcher.time_series.fetch_dataframe(["ts4"])
+        assert (df.columns == ["ts4"]).all()
+        assert df.shape == (3, 1)
 
     def test_fetch_dataframe_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):
@@ -206,79 +230,118 @@ class TestTimeSeries:
     def test_fetch_dataframe_column_names_are_aliases(self, data_fetcher, cdp_client_mock):
         def get_datapoints_frame(*args, **kwargs):
             return pd.DataFrame(
-                [[3000, 1, 10], [4000, 2, 20], [5000, 3, 30]], columns=["timestamp", "myts1|average", "myts2|max"]
+                [[1, 10], [2, 20], [3, 30]], columns=["myts1|average", "myts2|max"], index=[1000, 2000, 3000]
             )
 
-        def get_time_series_by_id(*args, **kwargs):
-            return [
-                {"name": "myts1", "id": 1234},
-                {"name": "myts2", "id": 2345},
-                {"name": "myts3", "id": 3456},
-                {"name": "myts4", "id": 4567},
-                {"name": "myts5", "id": 5678},
-            ]
-
         cdp_client_mock.get_datapoints_frame.side_effect = get_datapoints_frame
-        cdp_client_mock.get_time_series_by_id.side_effect = get_time_series_by_id
 
         df = data_fetcher.time_series.fetch_dataframe(["ts1", "ts2"])
-        assert (df.columns == ["timestamp", "ts1", "ts2"]).all()
+        assert (df.columns == ["ts1", "ts2"]).all()
 
     def test_fetch_datapoints_invalid_type(self, data_fetcher, cdp_client_mock):
         with pytest.raises(TypeError, match="type"):
             data_fetcher.time_series.fetch_datapoints(123)
 
     def test_fetch_datapoints_single(self, data_fetcher, cdp_client_mock):
-        def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
+        def get_datapoints_frame_single(id, external_id, start, end, aggregate, granularity, include_outside_points):
             assert id == 1234
+            assert external_id is None
             assert start == 3000
             assert end == 5000
             assert aggregate == "average"
             assert granularity == "1s"
             assert include_outside_points is None
-            return pd.DataFrame([[3000, 1], [4000, 2], [5000, 3]], columns=["timestamp", "value"])
+            return pd.DataFrame([[1], [2], [3]], columns=["value"], index=[1000, 2000, 3000])
 
         cdp_client_mock.get_datapoints_frame_single.side_effect = get_datapoints_frame_single
         df = data_fetcher.time_series.fetch_datapoints("ts1")
-        assert (df.columns == ["timestamp", "value"]).all()
-        assert df.shape == (3, 2)
+        assert (df.columns == ["value"]).all()
+        assert df.shape == (3, 1)
+
+    def test_fetch_datapoints_single_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame_single(id, external_id, start, end, aggregate, granularity, include_outside_points):
+            assert id is None
+            assert external_id == "abc"
+            assert start == 3000
+            assert end == 5000
+            assert aggregate == "average"
+            assert granularity == "1m"
+            assert include_outside_points is None
+            return pd.DataFrame([[1], [2], [3]], columns=["value"], index=[1000, 2000, 3000])
+
+        cdp_client_mock.get_datapoints_frame_single.side_effect = get_datapoints_frame_single
+        df = data_fetcher.time_series.fetch_datapoints("ts4")
+        assert (df.columns == ["value"]).all()
+        assert df.shape == (3, 1)
 
     def test_fetch_datapoints_single_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):
             data_fetcher.time_series.fetch_datapoints("non-existing-alias")
 
     def test_fetch_datapoints_multiple(self, data_fetcher, cdp_client_mock):
-        def get_datapoints_frame_single(id, start, end, aggregate, granularity, include_outside_points):
-            if id == 1234:
-                assert start == 3000
-                assert end == 5000
-                assert aggregate == "average"
-                assert granularity == "1s"
-                assert include_outside_points is None
-                return pd.DataFrame([[3000, 1], [4000, 2], [5000, 3]], columns=["timestamp", "value"])
-            elif id == 5678:
-                assert start == 6000
-                assert end == 8000
-                assert aggregate is None
-                assert granularity is None
-                assert include_outside_points is None
-                return pd.DataFrame([[6400, 10], [7300, 20], [7900, 30]], columns=["timestamp", "value"])
-            else:
-                raise AssertionError
+        def get_datapoints_frame_multiple(queries: List[DatapointsFrameQuery]):
+            results = []
+            for q in queries:
+                if q.id == 1234:
+                    assert q.external_id is None
+                    assert q.start == 3000
+                    assert q.end == 5000
+                    assert q.aggregate == "average"
+                    assert q.granularity == "1s"
+                    assert q.include_outside_points is None
+                    results.append(pd.DataFrame([[1], [2], [3]], columns=["value"], index=[3000, 4000, 5000]))
+                elif q.id == 5678:
+                    assert q.external_id is None
+                    assert q.start == 6000
+                    assert q.end == 8000
+                    assert q.aggregate is None
+                    assert q.granularity is None
+                    assert q.include_outside_points is None
+                    results.append(pd.DataFrame([[10], [20], [30]], columns=["value"], index=[6400, 7300, 7900]))
+                else:
+                    raise AssertionError
+            return results
 
-        cdp_client_mock.get_datapoints_frame_single.side_effect = get_datapoints_frame_single
+        cdp_client_mock.get_datapoints_frame_multiple.side_effect = get_datapoints_frame_multiple
 
         dfs = data_fetcher.time_series.fetch_datapoints(["ts1", "ts5"])
 
         for df in dfs.values():
-            assert (df.columns == ["timestamp", "value"]).all()
-            assert df.shape == (3, 2)
+            assert (df.columns == ["value"]).all()
+            assert df.shape == (3, 1)
 
-        assert (dfs["ts1"]["timestamp"] == [3000, 4000, 5000]).all()
+        assert (dfs["ts1"].index == [3000, 4000, 5000]).all()
         assert (dfs["ts1"]["value"] == [1, 2, 3]).all()
 
-        assert (dfs["ts5"]["timestamp"] == [6400, 7300, 7900]).all()
+        assert (dfs["ts5"].index == [6400, 7300, 7900]).all()
         assert (dfs["ts5"]["value"] == [10, 20, 30]).all()
+
+    def test_fetch_datapoints_multiple_external_id(self, data_fetcher, cdp_client_mock):
+        def get_datapoints_frame_multiple(queries: List[DatapointsFrameQuery]):
+            results = []
+            for q in queries:
+                if q.external_id == "abc":
+                    assert q.id is None
+                    assert q.start == 3000
+                    assert q.end == 5000
+                    assert q.aggregate == "average"
+                    assert q.granularity == "1m"
+                    assert q.include_outside_points is None
+                    results.append(pd.DataFrame([[1], [2], [3]], columns=["value"], index=[3000, 4000, 5000]))
+                else:
+                    raise AssertionError
+            return results
+
+        cdp_client_mock.get_datapoints_frame_multiple.side_effect = get_datapoints_frame_multiple
+
+        dfs = data_fetcher.time_series.fetch_datapoints(["ts4"])
+
+        for df in dfs.values():
+            assert (df.columns == ["value"]).all()
+            assert df.shape == (3, 1)
+
+        assert (dfs["ts4"].index == [3000, 4000, 5000]).all()
+        assert (dfs["ts4"]["value"] == [1, 2, 3]).all()
 
     def test_fetch_datapoints_multiple_invalid_alias(self, data_fetcher, cdp_client_mock):
         with pytest.raises(InvalidAlias, match="non-existing-alias"):

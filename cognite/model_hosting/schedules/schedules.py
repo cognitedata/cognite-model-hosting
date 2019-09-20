@@ -2,17 +2,15 @@ import json
 from collections import defaultdict
 from typing import Dict, List, Union
 
+import numpy as np
 import pandas as pd
-from marshmallow import RAISE, Schema, ValidationError, fields, validate
+from marshmallow import EXCLUDE, Schema, ValidationError, fields, validate
 
-from cognite.model_hosting.schedules.exceptions import (
-    DataframeMissingTimestampColumn,
-    DuplicateAliasInScheduledOutput,
-    InvalidScheduleOutputFormat,
-)
+from cognite.model_hosting._cognite_model_hosting_common.utils import timestamp_to_ms
+from cognite.model_hosting.schedules.exceptions import DuplicateAliasInScheduledOutput, InvalidScheduleOutputFormat
 
 
-def to_output(dataframe: Union[pd.DataFrame, List[pd.DataFrame]]):
+def to_output(dataframe: Union[pd.DataFrame, List[pd.DataFrame]]) -> Dict:
     """Converts your data to a json serializable output format complying with the schedules feature.
 
     Args:
@@ -46,23 +44,19 @@ def to_output(dataframe: Union[pd.DataFrame, List[pd.DataFrame]]):
 
 
 def _convert_df_to_output_format(df: pd.DataFrame):
-    if not "timestamp" in df.columns:
-        raise DataframeMissingTimestampColumn("DataFrame missing timestamp column")
-    column_names = [col for col in df.columns if col != "timestamp"]
-    output = {name: df[["timestamp", name]].values.tolist() for name in column_names}
-    return output
+    return {name: list(zip([timestamp_to_ms(ts) for ts in df.index], df[name])) for name in df.columns}
 
 
 class _ScheduleOutputSchema(Schema):
     class Meta:
-        unknown = RAISE
+        unknown = EXCLUDE
 
     timeSeries = fields.Dict(
         keys=fields.Str(), values=fields.List(fields.List(fields.Float(), validate=validate.Length(equal=2)))
     )
 
 
-_schedule_output_schema = _ScheduleOutputSchema(unknown=RAISE)
+_schedule_output_schema = _ScheduleOutputSchema(unknown=EXCLUDE)
 
 
 class ScheduleOutput:
@@ -98,18 +92,17 @@ class ScheduleOutput:
     def _get_dataframe_single_alias(self, alias) -> pd.DataFrame:
         self._validate_alias("timeSeries", alias)
         data = self._output["timeSeries"][alias]
-        timestamps = [point[0] for point in data]
+        timestamps = [int(point[0]) for point in data]
         datapoints = [point[1] for point in data]
-        return pd.DataFrame({"timestamp": timestamps, alias: datapoints})
+        return pd.DataFrame({alias: datapoints}, index=np.array(timestamps, dtype="datetime64[ms]"))
 
     def _get_dataframe_multiple_aliases(self, aliases: List[str]) -> pd.DataFrame:
         self._validate_aligned(aliases)
         data = {}
-        timestamps = [p[0] for p in self._output["timeSeries"][aliases[0]]]
-        data["timestamp"] = timestamps
+        timestamps = [int(p[0]) for p in self._output["timeSeries"][aliases[0]]]
         for a in aliases:
             data[a] = [p[1] for p in self._output["timeSeries"][a]]
-        return pd.DataFrame(data)
+        return pd.DataFrame(data, index=np.array(timestamps, dtype="datetime64[ms]"))
 
     def get_dataframe(self, alias: Union[str, List[str]]) -> pd.DataFrame:
         """Returns a time-aligned dataframe of the specified alias(es).

@@ -7,20 +7,19 @@ verify_ssl = true
 tox = "*"
 black = "==18.9b0"
 isort = "*"
-pytest = "*"
+pytest = "<5"
 pytest-cov = "*"
 pre-commit = "*"
 tox-pyenv = "*"
 twine = "*"
 yolk3k = "*"
-
-[packages]
-pandas = "*"
-marshmallow = "==3.0.0rc4"
-requests = "<3.0.0,>=2.21.0"
 responses = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
+
+[packages]
+marshmallow = "==3.0.0rc4"
+cognite-sdk = "==1.*"
 
 [requires]
 python_version = "3.7"

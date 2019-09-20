@@ -1,50 +1,68 @@
-import asyncio
-import re
-
 import pandas as pd
 import pytest
 
-from cognite.model_hosting.data_fetcher._client.cdp_client import CdpClient
-from tests.utils import BASE_URL_V0_5, BASE_URL_V0_6
+from cognite.client.data_classes import Datapoints, DatapointsList
+from cognite.client.testing import mock_cognite_client
+from cognite.model_hosting.data_fetcher._cdp_client import CdpClient, DatapointsFrameQuery
 
 
 @pytest.fixture
-def mock_get_datapoints_successive(rsps):
-    dps_100_000 = {
-        "data": {"items": [{"name": "ts", "datapoints": [{"timestamp": i, "value": i} for i in range(100000)]}]}
-    }
-    dps_50_000 = {
-        "data": {"items": [{"name": "ts", "datapoints": [{"timestamp": i, "value": i} for i in range(100000, 150000)]}]}
-    }
-
-    rsps.add(rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/1/data?(.*start=0.*)"), status=200, json=dps_100_000)
-    rsps.add(rsps.GET, re.compile(BASE_URL_V0_5 + "/timeseries/1/data?(.*start=100000.*)"), status=200, json=dps_50_000)
+def mock_cogcli_datapoints_retrieve_single():
+    with mock_cognite_client() as cogmock:
+        cogmock.datapoints.retrieve.return_value = Datapoints(
+            id=1, external_id="1", value=[1, 2, 3], timestamp=[1000, 2000, 3000]
+        )
+        yield
 
 
-def test_get_datapoints_paging(mock_get_datapoints_successive):
+def test_get_datapoints_frame_single(mock_cogcli_datapoints_retrieve_single):
     client = CdpClient()
-    res = client.get_datapoints_frame_single(id=1, start=0, end=150000)
-    assert (150000, 2) == res.shape
+    res = client.get_datapoints_frame_single(id=1, external_id=None, start=0, end=4000)
+    assert (3, 1) == res.shape
+    assert res.columns == ["value"]
 
 
 @pytest.fixture
-def mock_get_datapoints_frame_successive(rsps):
-    dps_100_000 = [{"timestamp": i, "ts": i} for i in range(0, 100000)]
-    dps_50_000 = [{"timestamp": i, "ts": i} for i in range(100000, 150000)]
+def mock_cogcli_datapoints_query():
+    with mock_cognite_client() as cogmock:
+        cogmock.datapoints.query.return_value = [
+            DatapointsList([Datapoints(id=1, external_id="1", value=[1, 2, 3], timestamp=[1000, 2000, 3000])])
+        ]
+        yield
 
-    dps_100_000_csv = pd.DataFrame(dps_100_000).to_csv(index=False)
-    dps_50_000_csv = pd.DataFrame(dps_50_000).to_csv(index=False)
 
-    rsps.add(
-        rsps.POST, BASE_URL_V0_5 + "/timeseries/byids", status=200, json={"data": {"items": [{"name": "ts", "id": 1}]}}
+def test_get_datapoints_frame_multiple(mock_cogcli_datapoints_query):
+    client = CdpClient()
+    res = client.get_datapoints_frame_multiple(
+        [
+            DatapointsFrameQuery(
+                id=1,
+                external_id=None,
+                start=0,
+                end=4000,
+                aggregate=None,
+                granularity=None,
+                include_outside_points=False,
+            )
+        ]
     )
-    rsps.add(rsps.POST, BASE_URL_V0_5 + "/timeseries/dataframe", status=200, body=dps_100_000_csv)
-    rsps.add(rsps.POST, BASE_URL_V0_5 + "/timeseries/dataframe", status=200, body=dps_50_000_csv)
+    assert (3, 1) == res[0].shape
+    assert res[0].columns == ["value"]
 
 
-def test_get_datapoints_frame_paging(mock_get_datapoints_frame_successive):
+@pytest.fixture
+def mock_cogcli_retrieve_dataframe():
+    with mock_cognite_client() as cogmock:
+        cogmock.datapoints.retrieve_dataframe.return_value = pd.DataFrame(
+            [[1], [2], [3]], columns=["1"], index=[3000, 4000, 5000]
+        )
+        yield
+
+
+def test_get_datapoints_frame(mock_cogcli_retrieve_dataframe):
     client = CdpClient()
     res = client.get_datapoints_frame(
         time_series=[{"id": 1, "aggregate": "avg"}], granularity="1s", start=0, end=150000
     )
-    assert (150000, 2) == res.shape
+    assert (3, 1) == res.shape
+    assert res.columns == ["1"]
