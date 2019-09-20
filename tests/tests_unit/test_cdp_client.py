@@ -2,13 +2,13 @@ import pandas as pd
 import pytest
 
 from cognite.client.data_classes import Datapoints, DatapointsList
-from cognite.client.testing import mock_cognite_client
+from cognite.client.testing import monkeypatch_cognite_client
 from cognite.model_hosting.data_fetcher._cdp_client import CdpClient, DatapointsFrameQuery
 
 
 @pytest.fixture
 def mock_cogcli_datapoints_retrieve_single():
-    with mock_cognite_client() as cogmock:
+    with monkeypatch_cognite_client() as cogmock:
         cogmock.datapoints.retrieve.return_value = Datapoints(
             id=1, external_id="1", value=[1, 2, 3], timestamp=[1000, 2000, 3000]
         )
@@ -24,7 +24,7 @@ def test_get_datapoints_frame_single(mock_cogcli_datapoints_retrieve_single):
 
 @pytest.fixture
 def mock_cogcli_datapoints_query():
-    with mock_cognite_client() as cogmock:
+    with monkeypatch_cognite_client() as cogmock:
         cogmock.datapoints.query.return_value = [
             DatapointsList([Datapoints(id=1, external_id="1", value=[1, 2, 3], timestamp=[1000, 2000, 3000])])
         ]
@@ -52,7 +52,7 @@ def test_get_datapoints_frame_multiple(mock_cogcli_datapoints_query):
 
 @pytest.fixture
 def mock_cogcli_retrieve_dataframe():
-    with mock_cognite_client() as cogmock:
+    with monkeypatch_cognite_client() as cogmock:
         cogmock.datapoints.retrieve_dataframe.return_value = pd.DataFrame(
             [[1], [2], [3]], columns=["1"], index=[3000, 4000, 5000]
         )
