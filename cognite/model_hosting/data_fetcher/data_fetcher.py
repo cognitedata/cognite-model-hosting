@@ -178,7 +178,9 @@ class TimeSeriesFetcher:
         for alias in aliases:
             ts_id = self._specs[alias].id
             if ts_id is None:
-                ts_id = self._cdp_client.cognite_client.time_series.retrieve(external_id=self._specs[alias].external_id).id
+                ts_id = self._cdp_client.cognite_client.time_series.retrieve(
+                    external_id=self._specs[alias].external_id
+                ).id
             if ts_id in seen:
                 raise InvalidFetchRequest(
                     "Aliases {} and {} reference the same time series: {}".format(alias, seen[ts_id], ts_id)
