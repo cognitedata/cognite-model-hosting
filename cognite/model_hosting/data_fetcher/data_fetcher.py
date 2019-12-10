@@ -232,7 +232,7 @@ class TimeSeriesFetcher:
                 time_series.append({"id": spec.id, "aggregates": [spec.aggregate]})
             elif spec.external_id:
                 ts_id = self._cdp_client.cognite_client.time_series.retrieve(external_id=spec.external_id).id
-                time_series.append({"id": ts_id, "aggregates": [spec.aggregate]})        
+                time_series.append({"id": ts_id, "aggregates": [spec.aggregate]})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
         df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         df.columns = aliases
