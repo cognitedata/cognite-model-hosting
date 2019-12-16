@@ -392,6 +392,7 @@ class ScheduleDataSpec(_BaseSpec):
             time_series_specs = {
                 alias: TimeSeriesSpec(
                     id=spec.id,
+                    external_id=spec.external_id,
                     start=start,
                     end=end,
                     aggregate=spec.aggregate,
