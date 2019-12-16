@@ -43,7 +43,10 @@ class TestCalculateWindowIntervals:
 
 @pytest.mark.parametrize("ids, ext_ids", [([1, 2], [None, None]), ([None, None], ["timeseries1", "timeseries2"])])
 def test_get_instances(ids, ext_ids):
-    schedule_ts_spec = {"ts1": ScheduleInputTimeSeriesSpec(id=ids[0], external_id=ext_ids[0]), "ts2": ScheduleInputTimeSeriesSpec(id=ids[1], external_id=ext_ids[1])}
+    schedule_ts_spec = {
+        "ts1": ScheduleInputTimeSeriesSpec(id=ids[0], external_id=ext_ids[0]),
+        "ts2": ScheduleInputTimeSeriesSpec(id=ids[1], external_id=ext_ids[1]),
+    }
     schedule_data_spec = ScheduleDataSpec(
         input=ScheduleInputSpec(time_series=schedule_ts_spec),
         output=ScheduleOutputSpec(),
