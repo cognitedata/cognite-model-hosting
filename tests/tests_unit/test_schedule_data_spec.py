@@ -41,8 +41,12 @@ class TestCalculateWindowIntervals:
         assert expected_windows == calculate_windows(start, end, stride, window_size, first)
 
 
-def test_get_instances():
-    schedule_ts_spec = {"ts1": ScheduleInputTimeSeriesSpec(id=1), "ts2": ScheduleInputTimeSeriesSpec(id=2)}
+@pytest.mark.parametrize("ids, ext_ids", [([1, 2], [None, None]), ([None, None], ["timeseries1", "timeseries2"])])
+def test_get_instances(ids, ext_ids):
+    schedule_ts_spec = {
+        "ts1": ScheduleInputTimeSeriesSpec(id=ids[0], external_id=ext_ids[0]),
+        "ts2": ScheduleInputTimeSeriesSpec(id=ids[1], external_id=ext_ids[1]),
+    }
     schedule_data_spec = ScheduleDataSpec(
         input=ScheduleInputSpec(time_series=schedule_ts_spec),
         output=ScheduleOutputSpec(),
@@ -54,8 +58,8 @@ def test_get_instances():
 
     expected_data_specs = []
     for i in range(0, 5 * 60000, 60000):
-        time_series_spec1 = TimeSeriesSpec(id=1, start=i, end=i + 60000)
-        time_series_spec2 = TimeSeriesSpec(id=2, start=i, end=i + 60000)
+        time_series_spec1 = TimeSeriesSpec(id=ids[0], external_id=ext_ids[0], start=i, end=i + 60000)
+        time_series_spec2 = TimeSeriesSpec(id=ids[1], external_id=ext_ids[1], start=i, end=i + 60000)
         data_spec = DataSpec(
             time_series={"ts1": time_series_spec1, "ts2": time_series_spec2},
             metadata=DataSpecMetadata(ScheduleSettings(start=i, end=i + 60000, window_size=60000, stride=60000)),
