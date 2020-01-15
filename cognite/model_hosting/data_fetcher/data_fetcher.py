@@ -177,6 +177,10 @@ class TimeSeriesFetcher:
         seen = {}
         for alias in aliases:
             ts_id = self._specs[alias].id
+            if ts_id is None:
+                ts_id = self._cdp_client.cognite_client.time_series.retrieve(
+                    external_id=self._specs[alias].external_id
+                ).id
             if ts_id in seen:
                 raise InvalidFetchRequest(
                     "Aliases {} and {} reference the same time series: {}".format(alias, seen[ts_id], ts_id)
@@ -227,7 +231,8 @@ class TimeSeriesFetcher:
             if spec.id:
                 time_series.append({"id": spec.id, "aggregates": [spec.aggregate]})
             elif spec.external_id:
-                time_series.append({"externalId": spec.external_id, "aggregates": [spec.aggregate]})
+                ts_id = self._cdp_client.cognite_client.time_series.retrieve(external_id=spec.external_id).id
+                time_series.append({"id": ts_id, "aggregates": [spec.aggregate]})
         start, end, granularity = self._get_common_start_end_granularity(aliases)
         df = self._cdp_client.get_datapoints_frame(time_series, granularity, start, end)
         df.columns = aliases
